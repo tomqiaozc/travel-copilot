@@ -1,0 +1,30 @@
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+class PlaceCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    type: str = Field(pattern="^(attraction|restaurant|hotel|other)$")
+    note: str = ""
+
+
+class PlaceUpdate(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    note: Optional[str] = None
+    day_number: Optional[int] = None
+    order_in_day: Optional[int] = None
+
+
+class PlaceResponse(BaseModel):
+    id: str
+    trip_id: str
+    name: str
+    type: str
+    note: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    source: str
+    day_number: Optional[int] = None
+    order_in_day: int

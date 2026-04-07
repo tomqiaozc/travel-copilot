@@ -16,8 +16,8 @@ def mock_container():
     container = MagicMock()
     container.query_items.return_value = []
     container.read_item.return_value = {}
-    container.create_item.side_effect = lambda body, **kwargs: body
-    container.replace_item.side_effect = lambda item_id, body, **kwargs: body
+    container.create_item.side_effect = lambda body=None, **kwargs: body
+    container.replace_item.side_effect = lambda item=None, body=None, **kwargs: body
     container.delete_item.return_value = None
     return container
 
