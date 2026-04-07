@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 from datetime import date, datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,9 +11,9 @@ class TripCreate(BaseModel):
 
 
 class TripUpdate(BaseModel):
-    name: str | None = None
-    start_date: date | None = None
-    end_date: date | None = None
+    name: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
 
 
 class TripResponse(BaseModel):
