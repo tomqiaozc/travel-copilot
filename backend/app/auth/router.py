@@ -3,6 +3,10 @@ from pydantic import BaseModel
 
 import httpx
 
+from datetime import datetime, timezone
+
+from azure.cosmos.exceptions import CosmosResourceNotFoundError
+
 from app.auth.dependencies import get_current_user
 from app.auth.jwt import create_token
 from app.config import settings
@@ -54,7 +58,8 @@ async def google_auth(body: GoogleAuthRequest):
     try:
         container.read_item(item=user_id, partition_key=user_id)
         container.replace_item(item=user_id, body=user_doc, partition_key=user_id)
-    except Exception:
+    except CosmosResourceNotFoundError:
+        user_doc["created_at"] = datetime.now(timezone.utc).isoformat()
         container.create_item(body=user_doc)
 
     token = create_token(

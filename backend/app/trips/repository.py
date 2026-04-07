@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
+from azure.cosmos.exceptions import CosmosResourceNotFoundError
+
 import app.db as db
 
 
@@ -24,7 +26,7 @@ def get_trip(trip_id: str, user_id: str) -> dict | None:
     try:
         item = container.read_item(item=trip_id, partition_key=user_id)
         return item
-    except Exception:
+    except CosmosResourceNotFoundError:
         return None
 
 
@@ -59,5 +61,5 @@ def delete_trip(trip_id: str, user_id: str) -> bool:
     try:
         container.delete_item(item=trip_id, partition_key=user_id)
         return True
-    except Exception:
+    except CosmosResourceNotFoundError:
         return False

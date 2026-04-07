@@ -13,6 +13,8 @@ from app.trips.repository import get_trip
 
 router = APIRouter(prefix="/api/trips/{trip_id}", tags=["ai"])
 
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg"}
+
 
 class PlanRequest(BaseModel):
     user_prompt: str = ""
@@ -30,6 +32,10 @@ async def extract_from_screenshots(
 
     if len(images) > 10:
         raise HTTPException(status_code=400, detail="Maximum 10 images allowed")
+
+    for image in images:
+        if image.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {image.content_type}")
 
     # Upload images to Blob Storage
     image_data_list = []

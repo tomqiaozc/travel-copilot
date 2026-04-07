@@ -1,5 +1,7 @@
 import uuid
 
+from azure.cosmos.exceptions import CosmosResourceNotFoundError
+
 import app.db as db
 
 
@@ -37,7 +39,7 @@ def update_place(place_id: str, trip_id: str, data: dict):
     container = db.get_container("places")
     try:
         existing = container.read_item(item=place_id, partition_key=trip_id)
-    except Exception:
+    except CosmosResourceNotFoundError:
         return None
     for key, value in data.items():
         if value is not None:
@@ -51,5 +53,5 @@ def delete_place(place_id: str, trip_id: str) -> bool:
     try:
         container.delete_item(item=place_id, partition_key=trip_id)
         return True
-    except Exception:
+    except CosmosResourceNotFoundError:
         return False
