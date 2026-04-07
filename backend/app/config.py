@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Azure Maps
     azure_maps_key: str = ""
 
+    # Local dev mode
+    use_local_db: bool = False
+
     model_config = {"env_file": ".env"}
 
 

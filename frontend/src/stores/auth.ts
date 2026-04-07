@@ -6,6 +6,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (code: string) => Promise<void>;
+  devLogin: () => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -16,6 +17,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (code: string) => {
     const { token, user } = await api.googleAuth(code);
+    localStorage.setItem("token", token);
+    set({ user, loading: false });
+  },
+
+  devLogin: async () => {
+    const resp = await fetch("/api/auth/dev-login", { method: "POST" });
+    if (!resp.ok) throw new Error("Dev login failed");
+    const { token, user } = await resp.json();
     localStorage.setItem("token", token);
     set({ user, loading: false });
   },

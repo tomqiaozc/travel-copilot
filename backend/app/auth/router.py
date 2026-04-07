@@ -68,6 +68,38 @@ async def google_auth(body: GoogleAuthRequest):
     return {"token": token, "user": user_doc}
 
 
+@router.post("/dev-login")
+async def dev_login():
+    """Dev-only endpoint: create a test user and return a JWT.
+    Only available when use_local_db is enabled.
+    """
+    if not settings.use_local_db:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not found")
+
+    container = db.get_container("users")
+    user_id = "dev-user-1"
+    user_doc = {
+        "id": user_id,
+        "google_id": "dev-local",
+        "email": "dev@localhost",
+        "name": "Local Developer",
+        "avatar_url": "",
+    }
+
+    try:
+        container.read_item(item=user_id, partition_key=user_id)
+        container.replace_item(item=user_id, body=user_doc, partition_key=user_id)
+    except CosmosResourceNotFoundError:
+        user_doc["created_at"] = datetime.now(timezone.utc).isoformat()
+        container.create_item(body=user_doc)
+
+    token = create_token(
+        {"sub": user_id, "email": user_doc["email"], "name": user_doc["name"]}
+    )
+    return {"token": token, "user": user_doc}
+
+
 @router.get("/me")
 async def get_me(user: dict = Depends(get_current_user)):
     return user

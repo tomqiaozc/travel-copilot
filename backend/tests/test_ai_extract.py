@@ -1,10 +1,12 @@
+import io
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.ai.extract import extract_places_from_images
+from tests.conftest import make_auth_headers
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -36,13 +38,7 @@ async def test_extract_places_handles_markdown_wrapped_json():
     assert result[0]["name"] == "Test Place"
 
 
-from unittest.mock import MagicMock
-from tests.conftest import make_auth_headers
-
-
 def test_extract_endpoint(client, mock_get_container, mock_container):
-    import io
-
     # Mock trip exists
     mock_container.read_item.return_value = {"id": "t1", "user_id": "user-1"}
 
@@ -51,11 +47,9 @@ def test_extract_endpoint(client, mock_get_container, mock_container):
     with patch("app.ai.router.extract_places_from_images", new_callable=AsyncMock) as mock_extract:
         mock_extract.return_value = sample_places
 
-        with patch("app.images.repository.get_blob_container_client") as mock_blob:
-            mock_blob_client = MagicMock()
-            mock_blob_client.url = "https://blob.url/test.png"
-            mock_blob.return_value.get_blob_client.return_value = mock_blob_client
-
+        # In local mode, images are saved to disk (no blob client needed)
+        with patch("app.images.repository.settings") as mock_settings:
+            mock_settings.use_local_db = True
             files = [("images", ("test.png", io.BytesIO(b"fake"), "image/png"))]
             headers = make_auth_headers()
             resp = client.post("/api/trips/t1/extract", headers=headers, files=files)

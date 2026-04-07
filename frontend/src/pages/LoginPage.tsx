@@ -5,7 +5,7 @@ import { useAuthStore } from "../stores/auth";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export function LoginPage() {
-  const { user, login } = useAuthStore();
+  const { user, login, devLogin } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -34,6 +34,11 @@ export function LoginPage() {
     window.location.href = url;
   };
 
+  const handleDevLogin = async () => {
+    await devLogin();
+    navigate("/", { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-sm w-full">
@@ -45,6 +50,14 @@ export function LoginPage() {
         >
           Sign in with Google
         </button>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={handleDevLogin}
+            className="w-full bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition"
+          >
+            Dev Login (Local Mode)
+          </button>
+        </div>
       </div>
     </div>
   );

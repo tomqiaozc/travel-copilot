@@ -10,12 +10,16 @@ Rules:
 - Group nearby places together on the same day to minimize travel distance
 - Each day should have a reasonable number of places (2-5)
 - Consider place types: try to include a mix of attractions and restaurants each day
-- Hotels don't need to be scheduled in the daily itinerary
+- Hotels don't need to be scheduled in the daily itinerary, but include all other place types
+- IMPORTANT: You MUST assign ALL non-hotel places to a day. Do not leave any place unassigned.
+- If a place has no coordinates, still assign it to a day based on context (name similarity to nearby places, or spread evenly).
 
-Return a JSON array of daily schedules. Example:
+Return a JSON array of daily schedules. Each place is identified by its "id" field — use the EXACT id values provided.
+
+Example:
 [
-  {"day": 1, "places": [{"id": "p1", "order": 1}, {"id": "p2", "order": 2}]},
-  {"day": 2, "places": [{"id": "p3", "order": 1}]}
+  {"day": 1, "places": [{"id": "actual-place-id-1", "order": 1}, {"id": "actual-place-id-2", "order": 2}]},
+  {"day": 2, "places": [{"id": "actual-place-id-3", "order": 1}]}
 ]
 
 Return ONLY the JSON array, no other text."""
@@ -27,19 +31,20 @@ def _build_places_description(places: list) -> str:
     for p in places:
         lat = p.get("latitude", "unknown")
         lng = p.get("longitude", "unknown")
-        lines.append(f"- {p['id']}: {p['name']} ({p['type']}) at ({lat}, {lng})")
+        coord_str = f"({lat}, {lng})" if lat and lng else "(no coordinates)"
+        lines.append(f"- id={p['id']}: {p['name']} ({p['type']}) {coord_str}")
 
-    # Add distance matrix for key pairs
-    if len(places) > 1:
+    # Add distance matrix for places that have coordinates
+    places_with_coords = [p for p in places if p.get("latitude") and p.get("longitude")]
+    if len(places_with_coords) > 1:
         lines.append("\nDistances between places:")
-        for i, p1 in enumerate(places):
-            for p2 in places[i + 1:]:
-                if p1.get("latitude") and p2.get("latitude"):
-                    dist = calculate_distance_km(
-                        p1["latitude"], p1["longitude"],
-                        p2["latitude"], p2["longitude"],
-                    )
-                    lines.append(f"  {p1['name']} <-> {p2['name']}: {dist:.1f} km")
+        for i, p1 in enumerate(places_with_coords):
+            for p2 in places_with_coords[i + 1:]:
+                dist = calculate_distance_km(
+                    p1["latitude"], p1["longitude"],
+                    p2["latitude"], p2["longitude"],
+                )
+                lines.append(f"  {p1['name']} <-> {p2['name']}: {dist:.1f} km")
 
     return "\n".join(lines)
 
@@ -55,12 +60,15 @@ async def plan_itinerary(
     places: list, num_days: int, user_prompt: str = ""
 ) -> list:
     """Use AI to plan an itinerary grouping places by proximity."""
-    # Filter out hotels and places without coordinates
-    plannable = [p for p in places if p.get("type") != "hotel" and p.get("latitude")]
+    # Filter out hotels but keep ALL other places (even without coordinates)
+    plannable = [p for p in places if p.get("type") != "hotel"]
+
+    if not plannable:
+        return []
 
     places_desc = _build_places_description(plannable)
 
-    user_message = f"Plan a {num_days}-day itinerary for these places:\n\n{places_desc}"
+    user_message = f"Plan a {num_days}-day itinerary for these {len(plannable)} places. Assign EVERY place to a day:\n\n{places_desc}"
     if user_prompt:
         user_message += f"\n\nAdditional instructions from user: {user_prompt}"
 
@@ -70,4 +78,24 @@ async def plan_itinerary(
     ]
 
     response = await chat_completion(messages)
-    return _parse_json_response(response)
+    schedule = _parse_json_response(response)
+
+    # Validate: check all plannable places are assigned
+    assigned_ids = set()
+    for day_plan in schedule:
+        for place_ref in day_plan["places"]:
+            assigned_ids.add(place_ref["id"])
+
+    # If AI missed some places, add them to the least-loaded day
+    missing = [p for p in plannable if p["id"] not in assigned_ids]
+    if missing:
+        # Find day with fewest places
+        day_loads = {d["day"]: len(d["places"]) for d in schedule}
+        for p in missing:
+            min_day = min(day_loads, key=day_loads.get)
+            target = next(d for d in schedule if d["day"] == min_day)
+            next_order = len(target["places"]) + 1
+            target["places"].append({"id": p["id"], "order": next_order})
+            day_loads[min_day] += 1
+
+    return schedule
