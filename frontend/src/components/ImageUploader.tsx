@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   onUpload: (files: File[]) => void;
@@ -7,6 +7,20 @@ interface Props {
 
 export function ImageUploader({ onUpload, loading }: Props) {
   const [files, setFiles] = useState<File[]>([]);
+  const objectUrls = useRef<string[]>([]);
+
+  // Revoke all object URLs on unmount
+  useEffect(() => {
+    return () => {
+      objectUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  const createPreviewUrl = (file: File): string => {
+    const url = URL.createObjectURL(file);
+    objectUrls.current.push(url);
+    return url;
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -30,6 +44,12 @@ export function ImageUploader({ onUpload, loading }: Props) {
   };
 
   const removeFile = (index: number) => {
+    // Revoke the URL for the removed file
+    const url = objectUrls.current[index];
+    if (url) {
+      URL.revokeObjectURL(url);
+      objectUrls.current.splice(index, 1);
+    }
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -59,7 +79,7 @@ export function ImageUploader({ onUpload, loading }: Props) {
             {files.map((file, i) => (
               <div key={i} className="relative w-16 h-16">
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={createPreviewUrl(file)}
                   alt={file.name}
                   className="w-16 h-16 object-cover rounded border"
                 />

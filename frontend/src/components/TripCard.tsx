@@ -6,13 +6,20 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+function formatDateRange(start: string, end: string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const days = Math.ceil((e.getTime() - s.getTime()) / 86400000) + 1;
+  return `${start} ~ ${end} (${days} days)`;
+}
+
 export function TripCard({ trip, onDelete }: Props) {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
       <Link to={`/trips/${trip.id}`} className="block">
         <h3 className="font-bold text-gray-800">{trip.name}</h3>
         <p className="text-sm text-gray-500 mt-1">
-          {trip.start_date} ~ {trip.end_date}
+          {formatDateRange(trip.start_date, trip.end_date)}
         </p>
       </Link>
       <div className="flex justify-between items-center mt-3">

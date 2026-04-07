@@ -22,6 +22,19 @@ const DAY_BG_COLORS = [
   "bg-indigo-50",
 ];
 
+function haversineKm(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  return (
+    Math.acos(
+      Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
+    ) * 6371
+  );
+}
+
 interface Props {
   dayNumber: number | null;
   places: Place[];
@@ -40,19 +53,34 @@ export function DayGroup({ dayNumber, places, label }: Props) {
       <Droppable droppableId={droppableId}>
         {(provided) => (
           <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[40px]">
-            {places.map((place, index) => (
-              <Draggable key={place.id} draggableId={place.id} index={index}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                  >
-                    <PlaceCard place={place} />
-                  </div>
-                )}
-              </Draggable>
-            ))}
+            {places.map((place, index) => {
+              let dist: number | undefined;
+              if (index > 0) {
+                const prev = places[index - 1];
+                if (
+                  prev.latitude != null && prev.longitude != null &&
+                  place.latitude != null && place.longitude != null
+                ) {
+                  dist = haversineKm(
+                    prev.latitude, prev.longitude,
+                    place.latitude, place.longitude
+                  );
+                }
+              }
+              return (
+                <Draggable key={place.id} draggableId={place.id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      <PlaceCard place={place} distanceFromPrev={dist} />
+                    </div>
+                  )}
+                </Draggable>
+              );
+            })}
             {provided.placeholder}
             {places.length === 0 && (
               <p className="text-xs text-gray-400 text-center py-2">

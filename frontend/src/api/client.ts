@@ -1,3 +1,5 @@
+import type { User, Trip, Place, ExtractedPlace, DaySchedule, ExportLink } from "../types";
+
 const API_BASE = "/api";
 
 async function request<T>(
@@ -43,35 +45,35 @@ async function request<T>(
 export const api = {
   // Auth
   googleAuth: (code: string) =>
-    request<{ token: string; user: any }>("/auth/google", {
+    request<{ token: string; user: User }>("/auth/google", {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
 
-  getMe: () => request<any>("/auth/me"),
+  getMe: () => request<User>("/auth/me"),
 
   // Trips
-  listTrips: () => request<any[]>("/trips"),
+  listTrips: () => request<Trip[]>("/trips"),
 
   createTrip: (data: { name: string; start_date: string; end_date: string }) =>
-    request<any>("/trips", { method: "POST", body: JSON.stringify(data) }),
+    request<Trip>("/trips", { method: "POST", body: JSON.stringify(data) }),
 
-  getTrip: (id: string) => request<any>(`/trips/${id}`),
+  getTrip: (id: string) => request<Trip>(`/trips/${id}`),
 
   deleteTrip: (id: string) =>
     request<void>(`/trips/${id}`, { method: "DELETE" }),
 
   // Places
-  listPlaces: (tripId: string) => request<any[]>(`/trips/${tripId}/places`),
+  listPlaces: (tripId: string) => request<Place[]>(`/trips/${tripId}/places`),
 
   addPlace: (tripId: string, data: { name: string; type: string; note: string }) =>
-    request<any>(`/trips/${tripId}/places`, {
+    request<Place>(`/trips/${tripId}/places`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updatePlace: (tripId: string, placeId: string, data: Record<string, any>) =>
-    request<any>(`/trips/${tripId}/places/${placeId}`, {
+  updatePlace: (tripId: string, placeId: string, data: Record<string, unknown>) =>
+    request<Place>(`/trips/${tripId}/places/${placeId}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
@@ -83,19 +85,19 @@ export const api = {
   extractPlaces: (tripId: string, images: File[]) => {
     const form = new FormData();
     images.forEach((img) => form.append("images", img));
-    return request<{ places: any[] }>(`/trips/${tripId}/extract`, {
+    return request<{ places: ExtractedPlace[] }>(`/trips/${tripId}/extract`, {
       method: "POST",
       body: form,
     });
   },
 
   planTrip: (tripId: string, userPrompt: string = "") =>
-    request<{ schedule: any[] }>(`/trips/${tripId}/plan`, {
+    request<{ schedule: DaySchedule[] }>(`/trips/${tripId}/plan`, {
       method: "POST",
       body: JSON.stringify({ user_prompt: userPrompt }),
     }),
 
   // Export
   exportGoogleMaps: (tripId: string) =>
-    request<{ links: any[] }>(`/trips/${tripId}/export/google-maps`),
+    request<{ links: ExportLink[] }>(`/trips/${tripId}/export/google-maps`),
 };

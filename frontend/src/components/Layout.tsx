@@ -19,6 +19,17 @@ export function Layout() {
         {user && (
           <div className="flex items-center gap-4">
             <span className="text-sm">{user.name || user.email}</span>
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.name}
+                className="w-8 h-8 rounded-full border-2 border-blue-400"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-800 flex items-center justify-center text-sm font-bold">
+                {(user.name || user.email).charAt(0).toUpperCase()}
+              </div>
+            )}
             <button
               onClick={handleLogout}
               className="text-sm bg-blue-700 px-3 py-1 rounded hover:bg-blue-800"

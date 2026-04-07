@@ -14,7 +14,7 @@ interface TripState {
   fetchTripDetail: (id: string) => Promise<void>;
   fetchPlaces: (tripId: string) => Promise<void>;
   addPlace: (tripId: string, data: { name: string; type: string; note: string }) => Promise<void>;
-  updatePlace: (tripId: string, placeId: string, data: Record<string, any>) => Promise<void>;
+  updatePlace: (tripId: string, placeId: string, data: Record<string, unknown>) => Promise<void>;
   deletePlace: (tripId: string, placeId: string) => Promise<void>;
   extractPlaces: (tripId: string, images: File[]) => Promise<ExtractedPlace[]>;
   planTrip: (tripId: string, userPrompt?: string) => Promise<void>;
