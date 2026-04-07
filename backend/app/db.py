@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from azure.cosmos import CosmosClient, PartitionKey
 
 from app.config import settings
