@@ -7,6 +7,7 @@ from app.trips.router import router as trips_router
 from app.places.router import router as places_router
 from app.images.router import router as images_router
 from app.ai.router import router as ai_router
+from app.export.router import router as export_router
 
 app = FastAPI(title="Travel Copilot API", version="0.1.0")
 
@@ -23,6 +24,7 @@ app.include_router(trips_router)
 app.include_router(places_router)
 app.include_router(images_router)
 app.include_router(ai_router)
+app.include_router(export_router)
 
 
 @app.get("/api/health")
