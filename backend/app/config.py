@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # GitHub Models
     github_token: str = ""
     github_models_endpoint: str = "https://models.inference.ai.azure.com"
-    ai_model: str = "claude-sonnet-4.6"
+    ai_model: str = "gpt-4o"
 
     # Azure Maps
     azure_maps_key: str = ""

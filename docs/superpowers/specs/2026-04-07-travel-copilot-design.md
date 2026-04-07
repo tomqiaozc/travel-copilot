@@ -22,7 +22,7 @@ Travel Copilot 是一款旅行规划 Web App，帮助用户将小红书等平台
 |------|---------|------|
 | 前端 | React SPA | Azure Static Web Apps |
 | 后端 | Python FastAPI | Azure App Service |
-| AI | GitHub Models (claude-sonnet-4.6) | 外部 API |
+| AI | GitHub Models (gpt-4o) | 外部 API |
 | 地图 | Azure Maps SDK (前端) + Azure Maps REST API (后端地理编码/距离) | Azure |
 | 存储 | Azure Blob Storage (截图) | Azure |
 | 数据库 | Azure Cosmos DB (用户 + 行程数据) | Azure |
@@ -30,15 +30,15 @@ Travel Copilot 是一款旅行规划 Web App，帮助用户将小红书等平台
 
 ### 架构决策
 
-- **AI 选型 GitHub Models (claude-sonnet-4.6) 而非 Azure OpenAI**：复用用户现有的 GitHub Copilot 订阅，避免额外 AI 服务费用。统一使用 claude-sonnet-4.6 处理 Vision（截图提取）和文本推理（行程排程），简化后端代码。
-- **claude-sonnet-4.6 Vision 一步完成 OCR + 结构化提取**：无需单独的 OCR 服务，截图直接发送给 claude-sonnet-4.6 的多模态能力，一步返回结构化 POI 数据。
+- **AI 选型 GitHub Models (gpt-4o) 而非 Azure OpenAI**：复用用户现有的 GitHub Copilot 订阅，避免额外 AI 服务费用。统一使用 gpt-4o 处理 Vision（截图提取）和文本推理（行程排程），简化后端代码。
+- **gpt-4o Vision 一步完成 OCR + 结构化提取**：无需单独的 OCR 服务，截图直接发送给 gpt-4o 的多模态能力，一步返回结构化 POI 数据。
 - **Azure Maps 而非 Google Maps**：保持 Azure 技术栈统一。应用内展示用 Azure Maps，最终导出生成 Google Maps URL 链接（不需要 Google Maps API）。
 
 ### 数据流
 
-1. **上传阶段**：用户批量上传截图 → Blob Storage 存储 → claude-sonnet-4.6 Vision 一步提取结构化 POI
+1. **上传阶段**：用户批量上传截图 → Blob Storage 存储 → gpt-4o Vision 一步提取结构化 POI
 2. **补充阶段**：用户手动添加地点 + 备注 → 合并到 POI 列表
-3. **规划阶段**：POI 列表 → Azure Maps 地理编码获取坐标 → claude-sonnet-4.6 按距离聚类排程（支持用户自然语言指令引导） → 生成每日行程
+3. **规划阶段**：POI 列表 → Azure Maps 地理编码获取坐标 → gpt-4o 按距离聚类排程（支持用户自然语言指令引导） → 生成每日行程
 4. **展示阶段**：前端 Azure Maps 渲染地图 → 按天着色标注 → 用户拖拽调整 → 一键导出 Google Maps URL
 
 ---
@@ -113,7 +113,7 @@ Travel Copilot 是一款旅行规划 Web App，帮助用户将小红书等平台
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/trips/{id}/extract` | 上传截图 → claude-sonnet-4.6 Vision 提取 POI 列表（待用户确认） |
+| POST | `/api/trips/{id}/extract` | 上传截图 → gpt-4o Vision 提取 POI 列表（待用户确认） |
 | POST | `/api/trips/{id}/plan` | AI 智能排程，接受可选 `user_prompt` 字段引导规划方向 |
 
 **`/api/trips/{id}/extract` 详情：**
@@ -123,7 +123,7 @@ Travel Copilot 是一款旅行规划 Web App，帮助用户将小红书等平台
 
 **`/api/trips/{id}/plan` 详情：**
 - 请求：`{ "user_prompt": "第一天轻松一点" }`（`user_prompt` 可选）
-- 流程：获取行程所有地点 → Azure Maps 地理编码 → 计算距离矩阵 → claude-sonnet-4.6 结合距离数据 + 用户指令生成每日排程
+- 流程：获取行程所有地点 → Azure Maps 地理编码 → 计算距离矩阵 → gpt-4o 结合距离数据 + 用户指令生成每日排程
 - 响应：按天分组的地点列表，含顺序和预估距离
 
 ### 导出

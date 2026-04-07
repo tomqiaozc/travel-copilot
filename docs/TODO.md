@@ -37,7 +37,7 @@
 ## 后端待优化
 
 ### 8. AI 模型
-- 当前使用 `gpt-4o`（GitHub Models 不支持 `claude-sonnet-4.6`）
+- 统一使用 `gpt-4o`（GitHub Models API）
 - 如需切换模型，修改 `.env` 中的 `AI_MODEL`
 
 ### 9. 地理编码并发
