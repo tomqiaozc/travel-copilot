@@ -71,7 +71,11 @@ async def plan_trip(
     # Geocode places that don't have coordinates yet
     needs_geocoding = [p for p in places if p.get("latitude") is None]
     if needs_geocoding:
-        geo_results = await geocode_places([p["name"] for p in needs_geocoding])
+        geocode_names = [p.get("name_local") or p["name"] for p in needs_geocoding]
+        geo_results = await geocode_places(
+            geocode_names,
+            location_hint=trip.get("name", ""),
+        )
         for place, geo in zip(needs_geocoding, geo_results):
             place["latitude"] = geo["latitude"]
             place["longitude"] = geo["longitude"]
