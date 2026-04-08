@@ -23,6 +23,8 @@ class PlaceUpdate(BaseModel):
     note: Optional[str] = None
     name_local: Optional[str] = None
     name_en: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     google_place_id: Optional[str] = None
     day_number: Optional[int] = None
     order_in_day: Optional[int] = None
