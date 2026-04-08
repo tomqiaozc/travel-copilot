@@ -1,4 +1,9 @@
+import pytest
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, AsyncMock, patch
+
 from app.auth.jwt import create_token, decode_token
+from app.auth.google_token import get_valid_google_token
 
 
 def test_create_and_decode_token():
@@ -13,8 +18,6 @@ def test_decode_invalid_token():
     result = decode_token("invalid.token.here")
     assert result is None
 
-
-from unittest.mock import AsyncMock, patch
 
 from tests.conftest import make_auth_headers
 
@@ -96,3 +99,79 @@ def test_google_auth_stores_tokens(client, mock_get_container):
         assert user_doc["google_access_token"] == "ya29.test-access-token"
         assert user_doc["google_refresh_token"] == "1//test-refresh-token"
         assert "google_token_expires_at" in user_doc
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_token_not_expired():
+    """Return existing token when it's still valid."""
+    future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    user_doc = {
+        "id": "google-user-1",
+        "google_access_token": "ya29.still-valid",
+        "google_refresh_token": "1//refresh",
+        "google_token_expires_at": future,
+    }
+
+    mock_container = MagicMock()
+    mock_container.read_item.return_value = user_doc
+
+    with patch("app.auth.google_token.db.get_container", return_value=mock_container):
+        token = await get_valid_google_token("google-user-1")
+        assert token == "ya29.still-valid"
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_token_expired_refreshes():
+    """Refresh and update DB when token is expired."""
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    user_doc = {
+        "id": "google-user-1",
+        "google_access_token": "ya29.expired",
+        "google_refresh_token": "1//refresh-token",
+        "google_token_expires_at": past,
+    }
+
+    mock_container = MagicMock()
+    mock_container.read_item.return_value = user_doc
+
+    mock_refresh_response = MagicMock()
+    mock_refresh_response.json.return_value = {
+        "access_token": "ya29.new-token",
+        "expires_in": 3600,
+    }
+    mock_refresh_response.raise_for_status = MagicMock()
+
+    with patch("app.auth.google_token.db.get_container", return_value=mock_container), \
+         patch("app.auth.google_token.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_refresh_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        token = await get_valid_google_token("google-user-1")
+        assert token == "ya29.new-token"
+
+        # Verify DB was updated
+        mock_container.replace_item.assert_called_once()
+        updated_doc = mock_container.replace_item.call_args[1]["body"]
+        assert updated_doc["google_access_token"] == "ya29.new-token"
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_token_no_refresh_token():
+    """Raise error when no refresh_token is available and token is expired."""
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    user_doc = {
+        "id": "google-user-1",
+        "google_access_token": "ya29.expired",
+        "google_refresh_token": "",
+        "google_token_expires_at": past,
+    }
+
+    mock_container = MagicMock()
+    mock_container.read_item.return_value = user_doc
+
+    with patch("app.auth.google_token.db.get_container", return_value=mock_container):
+        with pytest.raises(ValueError, match="No refresh token"):
+            await get_valid_google_token("google-user-1")
