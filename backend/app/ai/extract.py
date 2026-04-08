@@ -53,6 +53,10 @@ async def extract_places_from_images(image_data_list: list) -> dict:
     response = await vision_completion(EXTRACT_PROMPT, image_data_list)
     result = _parse_json_response(response)
 
+    # Handle legacy bare-array responses from AI
+    if isinstance(result, list):
+        return {"places": result, "country_code": None, "cities": []}
+
     return {
         "places": result.get("places", []),
         "country_code": result.get("country_code"),

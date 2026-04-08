@@ -31,6 +31,7 @@ def create_place(trip_id: str, data: dict, source: str = "manual") -> dict:
         "longitude": data.get("longitude"),
         "google_place_id": data.get("google_place_id"),
         "google_maps_url": data.get("google_maps_url"),
+        "geocode_confidence": data.get("geocode_confidence"),
         "source": data.get("source") or source,
         "day_number": data.get("day_number"),
         "order_in_day": data.get("order_in_day", 0),

@@ -19,10 +19,10 @@ async def test_extract_places_from_images():
         mock_vision.return_value = sample_response
         result = await extract_places_from_images([b"fake-image-data"])
 
-    assert len(result) == 5
-    assert result[0]["name"] == "浅草寺"
-    assert result[0]["type"] == "attraction"
-    assert result[2]["type"] == "restaurant"
+    assert len(result["places"]) == 5
+    assert result["places"][0]["name"] == "浅草寺"
+    assert result["places"][0]["type"] == "attraction"
+    assert result["places"][2]["type"] == "restaurant"
 
 
 @pytest.mark.asyncio
@@ -34,8 +34,8 @@ async def test_extract_places_handles_markdown_wrapped_json():
         mock_vision.return_value = wrapped
         result = await extract_places_from_images([b"fake-image-data"])
 
-    assert len(result) == 1
-    assert result[0]["name"] == "Test Place"
+    assert len(result["places"]) == 1
+    assert result["places"][0]["name"] == "Test Place"
 
 
 def test_extract_endpoint(client, mock_get_container, mock_container):
@@ -45,7 +45,7 @@ def test_extract_endpoint(client, mock_get_container, mock_container):
     sample_places = [{"name": "浅草寺", "type": "attraction"}]
 
     with patch("app.ai.router.extract_places_from_images", new_callable=AsyncMock) as mock_extract:
-        mock_extract.return_value = sample_places
+        mock_extract.return_value = {"places": sample_places, "country_code": None, "cities": []}
 
         # In local mode, images are saved to disk (no blob client needed)
         with patch("app.images.repository.settings") as mock_settings:

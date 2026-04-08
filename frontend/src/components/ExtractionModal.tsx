@@ -72,9 +72,9 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
               {items.map(({ index }) => {
                 const edited = edits.get(index) || places[index];
                 const confidence = edited.geocode_confidence || (edited.latitude != null ? "high" : "none");
-                const dotColor = confidence === "high" ? "text-green-500" : confidence === "low" ? "text-orange-500" : "text-gray-300";
+                const dotColor = confidence === "high" ? "text-green-500" : confidence === "low" ? "text-orange-500" : "text-red-500";
                 const dotTitle = confidence === "high" ? "Geocoded" : confidence === "low" ? "Location uncertain" : "Not geocoded";
-                const nameColor = confidence === "low" ? "text-orange-600" : "";
+                const nameColor = confidence === "low" ? "text-orange-600" : confidence === "none" ? "text-red-600" : "";
                 return (
                   <div
                     key={index}
@@ -102,6 +102,12 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
                           onChange={(e) => editPlace(index, "name", e.target.value)}
                           className={`w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none ${nameColor}`}
                         />
+                        {confidence === "none" && (
+                          <span className="text-red-500 text-[10px] whitespace-nowrap">缺少定位</span>
+                        )}
+                        {confidence === "low" && (
+                          <span className="text-orange-500 text-[10px] whitespace-nowrap">待确认</span>
+                        )}
                       </div>
                       {edited.name_local && (
                         <div className="text-xs text-gray-400 mt-0.5 ml-4">{edited.name_local}</div>

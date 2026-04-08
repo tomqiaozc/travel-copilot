@@ -9,25 +9,55 @@ import type { ExtractedPlace, Place } from "../types";
 
 function PlaceCard({
   place,
+  tripId,
   onDelete,
   onUpdate,
 }: {
   place: Place;
+  tripId: string;
   onDelete: () => void;
-  onUpdate: (data: { name: string; type: string; note: string; google_maps_url?: string }) => void;
+  onUpdate: (data: Record<string, unknown>) => void;
 }) {
+  const { resolveGoogleLink } = useTripStore();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(place.name);
   const [type, setType] = useState(place.type);
   const [note, setNote] = useState(place.note);
   const [googleMapsUrlInput, setGoogleMapsUrlInput] = useState(place.google_maps_url || getGoogleMapsUrl(place) || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const googleMapsUrl = getGoogleMapsUrl(place);
+  const confidence = place.geocode_confidence || (place.latitude != null ? "high" : "none");
   const TYPES = ["attraction", "restaurant", "hotel", "other"] as const;
 
-  const handleSave = () => {
-    onUpdate({ name, type, note, google_maps_url: googleMapsUrlInput || undefined });
-    setEditing(false);
+  const handleSave = async () => {
+    const urlChanged = googleMapsUrlInput && googleMapsUrlInput !== (place.google_maps_url || getGoogleMapsUrl(place) || "");
+
+    if (urlChanged && googleMapsUrlInput.includes("google.com/maps") || urlChanged && googleMapsUrlInput.includes("goo.gl")) {
+      // Validate and resolve the new Google Maps link
+      setSaving(true);
+      setError(null);
+      try {
+        const resolved = await resolveGoogleLink(tripId, googleMapsUrlInput);
+        onUpdate({
+          name, type, note,
+          google_maps_url: googleMapsUrlInput,
+          latitude: resolved.latitude,
+          longitude: resolved.longitude,
+          google_place_id: resolved.google_place_id,
+          geocode_confidence: "high",
+        });
+        setEditing(false);
+      } catch {
+        setError("Invalid Google Maps link");
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      onUpdate({ name, type, note, google_maps_url: googleMapsUrlInput || undefined });
+      setEditing(false);
+    }
   };
 
   const handleCancel = () => {
@@ -35,6 +65,7 @@ function PlaceCard({
     setType(place.type);
     setNote(place.note);
     setGoogleMapsUrlInput(place.google_maps_url || getGoogleMapsUrl(place) || "");
+    setError(null);
     setEditing(false);
   };
 
@@ -76,18 +107,21 @@ function PlaceCard({
           className="w-full border rounded px-2 py-1 text-sm"
           placeholder="Google Maps link (optional)"
         />
+        {error && <p className="text-red-500 text-xs">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button
             onClick={handleCancel}
             className="text-gray-500 hover:text-gray-700 text-sm"
+            disabled={saving}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            disabled={saving}
           >
-            Save
+            {saving ? "Validating..." : "Save"}
           </button>
         </div>
       </div>
@@ -97,7 +131,19 @@ function PlaceCard({
   return (
     <div className="border rounded-lg p-3 flex justify-between items-start">
       <div>
-        <div className="font-medium text-sm text-gray-800">{place.name}</div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`text-[8px] ${confidence === "high" ? "text-green-500" : confidence === "low" ? "text-orange-500" : "text-red-500"}`}
+            title={confidence === "high" ? "Location verified" : confidence === "low" ? "Location uncertain" : "Missing location"}
+          >
+            ●
+          </span>
+          <span className={`font-medium text-sm ${confidence === "none" ? "text-red-600" : confidence === "low" ? "text-orange-600" : "text-gray-800"}`}>
+            {place.name}
+          </span>
+          {confidence === "none" && <span className="text-red-500 text-[10px]">缺少定位</span>}
+          {confidence === "low" && <span className="text-orange-500 text-[10px]">待确认</span>}
+        </div>
         <div className="text-xs text-gray-500 mt-1">
           {place.type}
           {place.note && ` · ${place.note}`}
@@ -178,6 +224,8 @@ export function TripDetailPage() {
         name_en: place.name_en || "",
         latitude: place.latitude,
         longitude: place.longitude,
+        google_place_id: place.google_place_id,
+        geocode_confidence: place.geocode_confidence,
         day_number: place.day_number,
         order_in_day: place.order_in_day,
         source: "ai_extracted",
@@ -186,7 +234,7 @@ export function TripDetailPage() {
     setExtracted(null);
   };
 
-  const handleAddManual = async (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; source?: string }) => {
+  const handleAddManual = async (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; source?: string }) => {
     if (tripId) await addPlace(tripId, data);
   };
 
@@ -194,7 +242,7 @@ export function TripDetailPage() {
     if (tripId) await deletePlace(tripId, placeId);
   };
 
-  const handleUpdatePlace = async (placeId: string, data: { name: string; type: string; note: string; google_maps_url?: string }) => {
+  const handleUpdatePlace = async (placeId: string, data: Record<string, unknown>) => {
     if (tripId) await updatePlace(tripId, placeId, data);
   };
 
@@ -286,6 +334,7 @@ export function TripDetailPage() {
               <PlaceCard
                 key={place.id}
                 place={place}
+                tripId={tripId!}
                 onDelete={() => handleDeletePlace(place.id)}
                 onUpdate={(data) => handleUpdatePlace(place.id, data)}
               />

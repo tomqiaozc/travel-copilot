@@ -27,6 +27,7 @@ export interface Place {
   longitude: number | null;
   google_place_id?: string;
   google_maps_url?: string;
+  geocode_confidence?: "high" | "low" | "none";
   source: "ai_extracted" | "manual";
   day_number: number | null;
   order_in_day: number;
