@@ -143,11 +143,14 @@ export function TripDetailPage() {
     fetchTripDetail,
     addPlace,
     updatePlace,
+    updateTrip,
     deletePlace,
     extractPlaces,
   } = useTripStore();
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<ExtractedPlace[] | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
 
   useEffect(() => {
     if (tripId) fetchTripDetail(tripId);
@@ -203,7 +206,51 @@ export function TripDetailPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">{currentTrip.name}</h2>
+          {editingTitle ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                className="text-xl font-bold text-gray-800 border rounded px-2 py-1"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (tripId && titleInput.trim()) {
+                      updateTrip(tripId, { name: titleInput.trim() });
+                    }
+                    setEditingTitle(false);
+                  }
+                  if (e.key === "Escape") setEditingTitle(false);
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (tripId && titleInput.trim()) {
+                    updateTrip(tripId, { name: titleInput.trim() });
+                  }
+                  setEditingTitle(false);
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingTitle(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <h2
+              className="text-xl font-bold text-gray-800 cursor-pointer hover:text-blue-600"
+              onClick={() => { setTitleInput(currentTrip.name); setEditingTitle(true); }}
+              title="Click to edit"
+            >
+              {currentTrip.name}
+            </h2>
+          )}
           <p className="text-sm text-gray-500">
             {currentTrip.start_date} ~ {currentTrip.end_date}
           </p>
