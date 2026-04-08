@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
 from app.auth.dependencies import get_current_user
 from app.places.models import PlaceCreate, PlaceUpdate
 from app.places import repository
 from app.trips.repository import get_trip
+from app.maps.place_resolver import resolve_google_maps_link
 
 router = APIRouter(prefix="/api/trips/{trip_id}/places", tags=["places"])
+
+
+class GoogleLinkRequest(BaseModel):
+    url: str
 
 
 def _verify_trip_access(trip_id: str, user: dict):
@@ -46,3 +52,15 @@ async def delete_place(
 ):
     _verify_trip_access(trip_id, user)
     repository.delete_place(place_id, trip_id)
+
+
+@router.post("/resolve-google-link")
+async def resolve_google_link(
+    trip_id: str, body: GoogleLinkRequest, user: dict = Depends(get_current_user)
+):
+    _verify_trip_access(trip_id, user)
+    try:
+        result = await resolve_google_maps_link(body.url)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
