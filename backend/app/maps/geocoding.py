@@ -175,7 +175,7 @@ async def geocode_place(
             return result
 
     logger.warning("All strategies failed for '%s'", name)
-    return {"latitude": None, "longitude": None, "google_place_id": None}
+    return {"latitude": None, "longitude": None, "google_place_id": None, "geocode_confidence": "none"}
 
 
 def _compute_cluster_center(
@@ -274,6 +274,11 @@ async def geocode_places(
     ]
     first_pass = await asyncio.gather(*tasks)
 
+    # Mark first-pass successes as high confidence
+    for r in first_pass:
+        if r["latitude"] is not None and "geocode_confidence" not in r:
+            r["geocode_confidence"] = "high"
+
     # Compute cluster center from all successful results
     center = _compute_cluster_center(first_pass)
     if center is None:
@@ -324,9 +329,10 @@ async def geocode_places(
     results = list(first_pass)
     for idx, retry_r in zip(retry_indices, retry_results):
         if retry_r["latitude"] is not None:
+            retry_r["geocode_confidence"] = "low"
             results[idx] = retry_r
         else:
             # Retry failed — discard the outlier rather than keeping wrong coords
-            results[idx] = {"latitude": None, "longitude": None, "google_place_id": None}
+            results[idx] = {"latitude": None, "longitude": None, "google_place_id": None, "geocode_confidence": "none"}
 
     return results

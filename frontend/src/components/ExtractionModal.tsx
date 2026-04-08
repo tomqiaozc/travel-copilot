@@ -71,7 +71,10 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
               </div>
               {items.map(({ index }) => {
                 const edited = edits.get(index) || places[index];
-                const hasCoords = edited.latitude != null;
+                const confidence = edited.geocode_confidence || (edited.latitude != null ? "high" : "none");
+                const dotColor = confidence === "high" ? "text-green-500" : confidence === "low" ? "text-orange-500" : "text-gray-300";
+                const dotTitle = confidence === "high" ? "Geocoded" : confidence === "low" ? "Location uncertain" : "Not geocoded";
+                const nameColor = confidence === "low" ? "text-orange-600" : "";
                 return (
                   <div
                     key={index}
@@ -88,8 +91,8 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`text-[8px] ${hasCoords ? "text-green-500" : "text-gray-300"}`}
-                          title={hasCoords ? "Geocoded" : "Not geocoded"}
+                          className={`text-[8px] ${dotColor}`}
+                          title={dotTitle}
                         >
                           ●
                         </span>
@@ -97,7 +100,7 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
                           type="text"
                           value={edited.name}
                           onChange={(e) => editPlace(index, "name", e.target.value)}
-                          className="w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none"
+                          className={`w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none ${nameColor}`}
                         />
                       </div>
                       {edited.name_local && (

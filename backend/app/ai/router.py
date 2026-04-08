@@ -65,6 +65,7 @@ async def extract_from_screenshots(
             place["latitude"] = geo.get("latitude")
             place["longitude"] = geo.get("longitude")
             place["google_place_id"] = geo.get("google_place_id")
+            place["geocode_confidence"] = geo.get("geocode_confidence", "high")
 
     return {
         "places": places,

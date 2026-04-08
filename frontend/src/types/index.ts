@@ -43,6 +43,7 @@ export interface ExtractedPlace {
   latitude?: number | null;
   longitude?: number | null;
   google_place_id?: string;
+  geocode_confidence?: "high" | "low" | "none";
 }
 
 export interface DaySchedule {
