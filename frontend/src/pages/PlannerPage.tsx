@@ -5,6 +5,7 @@ import { useTripStore } from "../stores/trip";
 import { DayGroup } from "../components/DayGroup";
 import { TripMap } from "../components/TripMap";
 import { PlanPromptModal } from "../components/PlanPromptModal";
+import { api } from "../api/client";
 import type { Place } from "../types";
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
@@ -18,15 +19,11 @@ export function PlannerPage() {
     fetchTripDetail,
     updatePlace,
     planTrip,
-    exportGoogleMaps,
   } = useTripStore();
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [exportLinks, setExportLinks] = useState<
-    { day: number; url: string }[] | null
-  >(null);
 
   useEffect(() => {
     if (tripId) fetchTripDetail(tripId);
@@ -83,10 +80,21 @@ export function PlannerPage() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExportKml = async () => {
     if (!tripId) return;
-    const links = await exportGoogleMaps(tripId);
-    setExportLinks(links);
+    try {
+      const blob = await api.exportKml(tripId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${currentTrip?.name || "trip"}.kml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("KML export failed:", e);
+    }
   };
 
   if (loading || !currentTrip) {
@@ -112,10 +120,10 @@ export function PlannerPage() {
             AI Plan
           </button>
           <button
-            onClick={handleExport}
+            onClick={handleExportKml}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
           >
-            Export to Google Maps
+            Export KML
           </button>
         </div>
       </div>
@@ -155,34 +163,6 @@ export function PlannerPage() {
           loading={planning}
           error={planError}
         />
-      )}
-
-      {exportLinks && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="font-bold text-gray-800 mb-4">Google Maps Links</h3>
-            <div className="space-y-2">
-              {exportLinks.map((link) => (
-                <a
-                  key={link.day}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block border rounded-lg p-3 hover:bg-blue-50 text-sm"
-                >
-                  <span className="font-medium">Day {link.day}</span>
-                  <span className="text-gray-400 ml-2">Open in Google Maps</span>
-                </a>
-              ))}
-            </div>
-            <button
-              onClick={() => setExportLinks(null)}
-              className="mt-4 w-full border rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              Close
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

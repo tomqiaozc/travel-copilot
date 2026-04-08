@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
+import { getGoogleMapsUrl } from "../utils/googleMapsLink";
 import type { Place } from "../types";
 
 const DAY_COLORS = [
@@ -136,6 +137,19 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
             {selectedPlace.note && (
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{selectedPlace.note}</div>
             )}
+            {(() => {
+              const url = getGoogleMapsUrl(selectedPlace);
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12, color: "#2563eb", marginTop: 6, display: "inline-block" }}
+                >
+                  Open in Google Maps &#8599;
+                </a>
+              ) : null;
+            })()}
           </div>
         </InfoWindow>
       )}
