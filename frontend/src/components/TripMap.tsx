@@ -97,6 +97,18 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
     };
   }, [map, byDay]);
 
+  const fitBoundsToDay = (dayNum: number) => {
+    if (!map) return;
+    const dayPlaces = byDay.get(dayNum);
+    if (!dayPlaces || dayPlaces.length === 0) return;
+    const bounds = new google.maps.LatLngBounds();
+    dayPlaces.forEach((p) => {
+      bounds.extend({ lat: p.latitude!, lng: p.longitude! });
+    });
+    map.fitBounds(bounds, 50);
+    setSelectedPlace(null);
+  };
+
   return (
     <>
       {placesWithCoords.map((place) => {
@@ -158,7 +170,11 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
       {legendDays.length > 0 && (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg px-3 py-2 shadow text-xs flex gap-3" style={{ zIndex: 1 }}>
           {legendDays.map((day) => (
-            <div key={day} className="flex items-center gap-1">
+            <div
+              key={day}
+              className="flex items-center gap-1 cursor-pointer hover:opacity-70"
+              onClick={() => fitBoundsToDay(day)}
+            >
               <span
                 className="inline-block w-3 h-3 rounded-full"
                 style={{ backgroundColor: DAY_COLORS[(day - 1) % DAY_COLORS.length] }}
