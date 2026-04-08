@@ -30,8 +30,13 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   fetchTrips: async () => {
     set({ loading: true });
-    const trips = await api.listTrips();
-    set({ trips, loading: false });
+    try {
+      const trips = await api.listTrips();
+      set({ trips, loading: false });
+    } catch (e) {
+      set({ loading: false });
+      throw e;
+    }
   },
 
   createTrip: async (data) => {
@@ -47,11 +52,16 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   fetchTripDetail: async (id) => {
     set({ loading: true });
-    const [trip, places] = await Promise.all([
-      api.getTrip(id),
-      api.listPlaces(id),
-    ]);
-    set({ currentTrip: trip, places, loading: false });
+    try {
+      const [trip, places] = await Promise.all([
+        api.getTrip(id),
+        api.listPlaces(id),
+      ]);
+      set({ currentTrip: trip, places, loading: false });
+    } catch (e) {
+      set({ loading: false });
+      throw e;
+    }
   },
 
   fetchPlaces: async (tripId) => {

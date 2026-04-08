@@ -4,9 +4,10 @@ interface Props {
   onSubmit: (prompt: string) => void;
   onClose: () => void;
   loading: boolean;
+  error?: string | null;
 }
 
-export function PlanPromptModal({ onSubmit, onClose, loading }: Props) {
+export function PlanPromptModal({ onSubmit, onClose, loading, error }: Props) {
   const [prompt, setPrompt] = useState("");
 
   return (
@@ -37,6 +38,9 @@ export function PlanPromptModal({ onSubmit, onClose, loading }: Props) {
             {loading ? "Planning..." : "Plan Itinerary"}
           </button>
         </div>
+        {error && (
+          <p className="mt-3 text-sm text-red-600">{error}</p>
+        )}
       </div>
     </div>
   );

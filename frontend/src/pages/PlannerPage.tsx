@@ -22,6 +22,7 @@ export function PlannerPage() {
   } = useTripStore();
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [planning, setPlanning] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [exportLinks, setExportLinks] = useState<
     { day: number; url: string }[] | null
@@ -71,9 +72,12 @@ export function PlannerPage() {
   const handlePlan = async (prompt: string) => {
     if (!tripId) return;
     setPlanning(true);
+    setPlanError(null);
     try {
       await planTrip(tripId, prompt);
       setShowPlanModal(false);
+    } catch {
+      setPlanError("Planning failed. Please try again.");
     } finally {
       setPlanning(false);
     }
@@ -149,6 +153,7 @@ export function PlannerPage() {
           onSubmit={handlePlan}
           onClose={() => setShowPlanModal(false)}
           loading={planning}
+          error={planError}
         />
       )}
 
