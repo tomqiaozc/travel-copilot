@@ -173,7 +173,7 @@ export function TripDetailPage() {
     setExtracted(null);
   };
 
-  const handleAddManual = async (data: { name: string; type: string; note: string }) => {
+  const handleAddManual = async (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; source?: string }) => {
     if (tripId) await addPlace(tripId, data);
   };
 
@@ -215,7 +215,7 @@ export function TripDetailPage() {
           </div>
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <h3 className="font-medium text-gray-700 mb-3">Add Place</h3>
-            <PlaceForm onSubmit={handleAddManual} />
+            <PlaceForm onSubmit={handleAddManual} tripId={tripId!} />
           </div>
         </div>
 
