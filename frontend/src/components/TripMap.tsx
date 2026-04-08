@@ -60,13 +60,14 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
     map.fitBounds(bounds, 50);
   }, [map, placesWithCoords]);
 
-  // Fly to selected place
+  // Fly to selected place and open InfoWindow
   useEffect(() => {
     if (!map || !selectedPlaceId) return;
     const place = places.find((p) => p.id === selectedPlaceId);
     if (!place?.latitude || !place?.longitude) return;
     map.panTo({ lat: place.latitude, lng: place.longitude });
     map.setZoom(15);
+    setSelectedPlace(place);
   }, [map, selectedPlaceId, places]);
 
   // Draw polylines
