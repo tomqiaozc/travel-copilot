@@ -47,7 +47,8 @@ async def get_valid_google_token(user_id: str) -> str:
                 "grant_type": "refresh_token",
             },
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            raise ValueError(f"Google token refresh failed (HTTP {resp.status_code}). User may need to re-authenticate.")
         token_data = resp.json()
 
     new_expires_at = (

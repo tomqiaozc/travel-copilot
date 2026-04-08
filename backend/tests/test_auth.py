@@ -135,6 +135,7 @@ async def test_get_valid_google_token_expired_refreshes():
     mock_container.read_item.return_value = user_doc
 
     mock_refresh_response = MagicMock()
+    mock_refresh_response.status_code = 200
     mock_refresh_response.json.return_value = {
         "access_token": "ya29.new-token",
         "expires_in": 3600,
@@ -174,4 +175,34 @@ async def test_get_valid_google_token_no_refresh_token():
 
     with patch("app.auth.google_token.db.get_container", return_value=mock_container):
         with pytest.raises(ValueError, match="No refresh token"):
+            await get_valid_google_token("google-user-1")
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_token_refresh_fails():
+    """Raise ValueError when Google token refresh returns an error."""
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    user_doc = {
+        "id": "google-user-1",
+        "google_access_token": "ya29.expired",
+        "google_refresh_token": "1//revoked-token",
+        "google_token_expires_at": past,
+    }
+
+    mock_container = MagicMock()
+    mock_container.read_item.return_value = user_doc
+
+    mock_error_response = MagicMock()
+    mock_error_response.status_code = 401
+    mock_error_response.json.return_value = {"error": "invalid_grant"}
+
+    with patch("app.auth.google_token.db.get_container", return_value=mock_container), \
+         patch("app.auth.google_token.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_error_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(ValueError, match="Google token refresh failed"):
             await get_valid_google_token("google-user-1")
