@@ -1,3 +1,6 @@
+import xml.etree.ElementTree as ET
+
+
 def generate_google_maps_url(places: list) -> str:
     """Generate a Google Maps directions URL for a list of ordered places."""
     if not places:
@@ -39,9 +42,6 @@ def generate_export_links(places: list) -> list:
         links.append({"day": day_num, "url": url, "place_count": len(day_places)})
 
     return links
-
-
-import xml.etree.ElementTree as ET
 
 
 def generate_kml(places: list, trip_name: str) -> str:

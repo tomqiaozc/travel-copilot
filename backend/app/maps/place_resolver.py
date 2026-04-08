@@ -119,16 +119,23 @@ async def resolve_google_maps_link(url: str) -> dict:
     Raises ValueError on invalid URL or resolution failure.
     """
     # Step 1: Follow redirects if short link
-    if "goo.gl" in url or "maps.app" in url:
-        resolved_url = await follow_redirects(url)
-    else:
-        resolved_url = url
+    try:
+        if "goo.gl" in url or "maps.app" in url:
+            resolved_url = await follow_redirects(url)
+        else:
+            resolved_url = url
+    except httpx.HTTPError as exc:
+        raise ValueError(f"Failed to resolve URL: {exc}") from exc
 
     # Step 2: Parse the URL
     parsed = parse_google_maps_url(resolved_url)
 
     # Step 3: Get place_id if not already found
-    google_place_id = parsed.get("place_id")
+    # Note: hex ftid (0x...:0x...) extracted from URL data params is NOT a valid
+    # Google Places API place_id (which uses ChIJ... format). Always geocode when
+    # the extracted ID is a hex ftid.
+    raw_id = parsed.get("place_id")
+    google_place_id = raw_id if raw_id and raw_id.startswith("ChIJ") else None
     if not google_place_id:
         # Try geocoding with name or coordinates
         name = parsed.get("name", "")
@@ -139,7 +146,10 @@ async def resolve_google_maps_link(url: str) -> dict:
             raise ValueError("Could not resolve place from URL")
 
     # Step 4: Get place details
-    details = await fetch_place_details(google_place_id)
+    try:
+        details = await fetch_place_details(google_place_id)
+    except httpx.HTTPError as exc:
+        raise ValueError(f"Failed to fetch place details: {exc}") from exc
 
     display_name = details.get("displayName", {}).get("text", parsed.get("name", "Unknown"))
     location = details.get("location", {})

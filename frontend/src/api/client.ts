@@ -69,7 +69,7 @@ export const api = {
   // Places
   listPlaces: (tripId: string) => request<Place[]>(`/trips/${tripId}/places`),
 
-  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; day_number?: number | null; order_in_day?: number | null; source?: string }) =>
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; day_number?: number | null; order_in_day?: number | null; source?: string }) =>
     request<Place>(`/trips/${tripId}/places`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -115,6 +115,11 @@ export const api = {
     const resp = await fetch(`/api/trips/${tripId}/export/kml`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
+    if (resp.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
     if (!resp.ok) throw new Error(`API error: ${resp.status}`);
     return resp.blob();
   },
