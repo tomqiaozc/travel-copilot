@@ -15,13 +15,16 @@ const DAY_LABELS = [
 interface Props {
   places: Place[];
   azureMapsKey: string;
+  selectedPlaceId?: string | null;
 }
 
-export function TripMap({ places, azureMapsKey }: Props) {
+export function TripMap({ places, azureMapsKey, selectedPlaceId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<atlas.Map | null>(null);
   const isReady = useRef(false);
   const popupRef = useRef<atlas.Popup | null>(null);
+  const dataSourceRef = useRef<atlas.source.DataSource | null>(null);
+  const layerIdsRef = useRef<string[]>([]);
   const [legendDays, setLegendDays] = useState<number[]>([]);
 
   // Initialize map once
@@ -59,11 +62,19 @@ export function TripMap({ places, azureMapsKey }: Props) {
     if (!map) return;
 
     const renderData = () => {
-      map.sources.clear();
-      map.layers.clear();
+      // Remove only our own layers and source (not the built-in base map ones)
+      for (const id of layerIdsRef.current) {
+        try { map.layers.remove(id); } catch { /* already removed */ }
+      }
+      layerIdsRef.current = [];
+      if (dataSourceRef.current) {
+        try { map.sources.remove(dataSourceRef.current); } catch { /* already removed */ }
+        dataSourceRef.current = null;
+      }
 
       const dataSource = new atlas.source.DataSource();
       map.sources.add(dataSource);
+      dataSourceRef.current = dataSource;
 
       const placesWithCoords = places.filter((p) => p.latitude && p.longitude);
       if (placesWithCoords.length === 0) {
@@ -122,14 +133,16 @@ export function TripMap({ places, azureMapsKey }: Props) {
 
       map.layers.add(bubbleLayer);
 
-      map.layers.add(
-        new atlas.layer.LineLayer(dataSource, undefined, {
-          strokeColor: ["get", "color"] as any,
-          strokeWidth: 2,
-          strokeDashArray: [2, 2],
-          filter: ["==", ["geometry-type"], "LineString"] as any,
-        })
-      );
+      const lineLayer = new atlas.layer.LineLayer(dataSource, undefined, {
+        strokeColor: ["get", "color"] as any,
+        strokeWidth: 2,
+        strokeDashArray: [2, 2],
+        filter: ["==", ["geometry-type"], "LineString"] as any,
+      });
+
+      map.layers.add(lineLayer);
+
+      layerIdsRef.current = [bubbleLayer.getId(), lineLayer.getId()];
 
       // Click-to-view popup on markers
       map.events.add("click", bubbleLayer, (e: any) => {
@@ -175,6 +188,18 @@ export function TripMap({ places, azureMapsKey }: Props) {
       map.events.addOnce("ready", renderData);
     }
   }, [places]);
+
+  // Fly to selected place
+  useEffect(() => {
+    if (!selectedPlaceId || !mapInstance.current || !isReady.current) return;
+    const place = places.find((p) => p.id === selectedPlaceId);
+    if (!place?.latitude || !place?.longitude) return;
+    mapInstance.current.setCamera({
+      center: [place.longitude, place.latitude],
+      zoom: 15,
+      type: "fly" as any,
+    });
+  }, [selectedPlaceId, places]);
 
   if (!azureMapsKey) {
     return (

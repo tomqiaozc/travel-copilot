@@ -22,6 +22,7 @@ export function PlannerPage() {
   } = useTripStore();
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [planning, setPlanning] = useState(false);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [exportLinks, setExportLinks] = useState<
     { day: number; url: string }[] | null
   >(null);
@@ -125,19 +126,21 @@ export function PlannerPage() {
                 dayNumber={day}
                 places={dayGroups.get(day) || []}
                 label={`Day ${day}`}
+                onPlaceClick={(p) => setSelectedPlaceId(p.id)}
               />
             ))}
             <DayGroup
               dayNumber={null}
               places={dayGroups.get(null) || []}
               label="Unassigned"
+              onPlaceClick={(p) => setSelectedPlaceId(p.id)}
             />
           </DragDropContext>
         </div>
 
         {/* Right: Map */}
         <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
-          <TripMap places={places} azureMapsKey={AZURE_MAPS_KEY} />
+          <TripMap places={places} azureMapsKey={AZURE_MAPS_KEY} selectedPlaceId={selectedPlaceId} />
         </div>
       </div>
 

@@ -39,9 +39,10 @@ interface Props {
   dayNumber: number | null;
   places: Place[];
   label: string;
+  onPlaceClick?: (place: Place) => void;
 }
 
-export function DayGroup({ dayNumber, places, label }: Props) {
+export function DayGroup({ dayNumber, places, label, onPlaceClick }: Props) {
   const droppableId = dayNumber !== null ? `day-${dayNumber}` : "unassigned";
   const colorIdx = dayNumber !== null ? (dayNumber - 1) % DAY_COLORS.length : -1;
   const borderColor = colorIdx >= 0 ? DAY_COLORS[colorIdx] : "border-gray-300";
@@ -75,7 +76,7 @@ export function DayGroup({ dayNumber, places, label }: Props) {
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
                     >
-                      <PlaceCard place={place} distanceFromPrev={dist} />
+                      <PlaceCard place={place} distanceFromPrev={dist} onPlaceClick={onPlaceClick} />
                     </div>
                   )}
                 </Draggable>
