@@ -38,30 +38,29 @@ COUNTRY_MAX_RADIUS_KM: dict[str, float] = {
 DEFAULT_MAX_RADIUS_KM = 2000.0
 
 
-async def _azure_maps_search(
-    query: str,
-    country_set: Optional[str] = None,
+async def _google_geocode(
+    address: str,
+    region: Optional[str] = None,
     limit: int = 3,
 ) -> list[dict]:
-    """Low-level Azure Maps Fuzzy Search call."""
+    """Google Geocoding API call."""
     params: dict = {
-        "api-version": "1.0",
-        "subscription-key": settings.azure_maps_key,
-        "query": query,
-        "limit": limit,
+        "address": address,
+        "key": settings.google_maps_api_key,
     }
-    if country_set:
-        params["countrySet"] = country_set
+    if region:
+        params["region"] = region.lower()
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(
-            "https://atlas.microsoft.com/search/fuzzy/json",
+            "https://maps.googleapis.com/maps/api/geocode/json",
             params=params,
         )
         resp.raise_for_status()
         data = resp.json()
 
-    return data.get("results", [])
+    results = data.get("results", [])
+    return results[:limit]
 
 
 def _validate_result(
@@ -71,21 +70,21 @@ def _validate_result(
     ref_lon: Optional[float] = None,
 ) -> bool:
     """Check if a geocoding result is geographically reasonable."""
-    pos = result.get("position", {})
-    lat, lon = pos.get("lat"), pos.get("lon")
-    if lat is None or lon is None:
+    loc = result.get("geometry", {}).get("location", {})
+    lat, lng = loc.get("lat"), loc.get("lng")
+    if lat is None or lng is None:
         return False
 
     # Check against reference point (already-geocoded place in same trip)
     if ref_lat is not None and ref_lon is not None:
-        if calculate_distance_km(lat, lon, ref_lat, ref_lon) > 80:
+        if calculate_distance_km(lat, lng, ref_lat, ref_lon) > 80:
             return False
 
     # Check against country center
     if country_code and country_code in COUNTRY_CENTERS:
         center_lat, center_lon = COUNTRY_CENTERS[country_code]
         max_r = COUNTRY_MAX_RADIUS_KM.get(country_code, DEFAULT_MAX_RADIUS_KM)
-        if calculate_distance_km(lat, lon, center_lat, center_lon) > max_r:
+        if calculate_distance_km(lat, lng, center_lat, center_lon) > max_r:
             return False
 
     return True
@@ -100,8 +99,12 @@ def _pick_best(
     """Pick the first valid result from a list."""
     for r in results:
         if _validate_result(r, country_code, ref_lat, ref_lon):
-            pos = r["position"]
-            return {"latitude": pos["lat"], "longitude": pos["lon"]}
+            loc = r["geometry"]["location"]
+            return {
+                "latitude": loc["lat"],
+                "longitude": loc["lng"],
+                "google_place_id": r.get("place_id"),
+            }
     return None
 
 
@@ -114,7 +117,7 @@ async def _search_strategy(
 ) -> Optional[dict]:
     """Run one search strategy and return validated result or None."""
     try:
-        results = await _azure_maps_search(query, country_set=country_set)
+        results = await _google_geocode(address=query, region=country_set)
         if results:
             return _pick_best(results, country_code, ref_lat, ref_lon)
     except Exception:
@@ -134,7 +137,7 @@ async def geocode_place(
     """Geocode a place using parallel multi-strategy search.
 
     Fires up to 3 strategies concurrently (local name, English name, Chinese name),
-    prioritizing local language > English > Chinese for Azure Maps matching.
+    prioritizing local language > English > Chinese for Google Geocoding matching.
     """
     # Build strategies: (query, country_set) — ordered by priority
     # For each name variant, try with and without city context (location_hint)
@@ -172,7 +175,7 @@ async def geocode_place(
             return result
 
     logger.warning("All strategies failed for '%s'", name)
-    return {"latitude": None, "longitude": None}
+    return {"latitude": None, "longitude": None, "google_place_id": None}
 
 
 def _compute_cluster_center(
@@ -220,26 +223,26 @@ async def _reverse_geocode_city(lat: float, lon: float) -> Optional[str]:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
-                "https://atlas.microsoft.com/search/address/reverse/json",
+                "https://maps.googleapis.com/maps/api/geocode/json",
                 params={
-                    "api-version": "1.0",
-                    "subscription-key": settings.azure_maps_key,
-                    "query": f"{lat},{lon}",
+                    "latlng": f"{lat},{lon}",
+                    "key": settings.google_maps_api_key,
+                    "result_type": "locality|administrative_area_level_2",
                 },
             )
             resp.raise_for_status()
             data = resp.json()
-        addresses = data.get("addresses", [])
-        if addresses:
-            addr = addresses[0].get("address", {})
-            # Prefer municipalitySubdivision (more specific), then municipality
-            city = (
-                addr.get("municipalitySubdivision")
-                or addr.get("municipality")
-            )
-            if city:
-                logger.info("Reverse geocoded cluster center to city: %s", city)
-                return city
+        results = data.get("results", [])
+        if results:
+            # Extract city name from address_components
+            for component in results[0].get("address_components", []):
+                if "locality" in component.get("types", []):
+                    city = component.get("long_name")
+                    if city:
+                        logger.info("Reverse geocoded cluster center to city: %s", city)
+                        return city
+            # Fallback to formatted_address
+            return results[0].get("formatted_address", "").split(",")[0]
     except Exception:
         logger.warning("Reverse geocode failed for (%.4f, %.4f)", lat, lon, exc_info=True)
     return None
@@ -255,7 +258,7 @@ async def geocode_places(
     1. First pass: geocode all places concurrently (country-level constraint only).
     2. Compute median cluster center from results.
     3. Second pass: re-geocode outliers (>50km from cluster) AND failed places,
-       using the cluster center as a geographic bias for Azure Maps.
+       using the cluster center as a geographic bias.
     """
     # First pass: geocode all places concurrently
     # Each place can have its own city hint; fall back to the shared location_hint
@@ -324,6 +327,6 @@ async def geocode_places(
             results[idx] = retry_r
         else:
             # Retry failed — discard the outlier rather than keeping wrong coords
-            results[idx] = {"latitude": None, "longitude": None}
+            results[idx] = {"latitude": None, "longitude": None, "google_place_id": None}
 
     return results

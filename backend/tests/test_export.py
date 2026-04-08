@@ -29,3 +29,13 @@ def test_generate_export_links():
     assert links[0]["day"] == 1
     assert "google.com/maps/dir/" in links[0]["url"]
     assert links[1]["day"] == 2
+
+
+def test_generate_google_maps_url_with_place_id():
+    places = [
+        {"name": "浅草寺", "latitude": 35.7148, "longitude": 139.7967, "google_place_id": "ChIJ82XhAEuMGGARqBqkPGiMaMA"},
+        {"name": "晴空塔", "latitude": 35.7101, "longitude": 139.8107, "google_place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4"},
+    ]
+    url = generate_google_maps_url(places)
+    assert "place_id:ChIJ82XhAEuMGGARqBqkPGiMaMA" in url
+    assert "place_id:ChIJN1t_tDeuEmsRUsoyG83frY4" in url

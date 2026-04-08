@@ -25,6 +25,7 @@ export interface Place {
   note: string;
   latitude: number | null;
   longitude: number | null;
+  google_place_id?: string;
   source: "ai_extracted" | "manual";
   day_number: number | null;
   order_in_day: number;
@@ -40,6 +41,7 @@ export interface ExtractedPlace {
   order_in_day?: number | null;
   latitude?: number | null;
   longitude?: number | null;
+  google_place_id?: string;
 }
 
 export interface DaySchedule {

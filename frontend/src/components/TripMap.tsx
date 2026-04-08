@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import * as atlas from "azure-maps-control";
+import { useEffect, useState, useMemo } from "react";
+import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import type { Place } from "../types";
 
 const DAY_COLORS = [
@@ -14,206 +14,134 @@ const DAY_LABELS = [
 
 interface Props {
   places: Place[];
-  azureMapsKey: string;
+  googleMapsApiKey: string;
   selectedPlaceId?: string | null;
 }
 
-export function TripMap({ places, azureMapsKey, selectedPlaceId }: Props) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<atlas.Map | null>(null);
-  const isReady = useRef(false);
-  const popupRef = useRef<atlas.Popup | null>(null);
-  const dataSourceRef = useRef<atlas.source.DataSource | null>(null);
-  const layerIdsRef = useRef<string[]>([]);
-  const [legendDays, setLegendDays] = useState<number[]>([]);
+function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlaceId?: string | null }) {
+  const map = useMap();
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
-  // Initialize map once
-  useEffect(() => {
-    if (!mapRef.current || !azureMapsKey) return;
+  const placesWithCoords = useMemo(
+    () => places.filter((p) => p.latitude && p.longitude),
+    [places]
+  );
 
-    const map = new atlas.Map(mapRef.current, {
-      authOptions: {
-        authType: atlas.AuthenticationType.subscriptionKey as any,
-        subscriptionKey: azureMapsKey,
-      },
-      center: [139.7671, 35.6812],
-      zoom: 11,
-      style: "road",
+  // Group by day
+  const byDay = useMemo(() => {
+    const groups = new Map<number | null, Place[]>();
+    placesWithCoords.forEach((p) => {
+      const day = p.day_number;
+      if (!groups.has(day)) groups.set(day, []);
+      groups.get(day)!.push(p);
     });
-
-    mapInstance.current = map;
-
-    map.events.addOnce("ready", () => {
-      isReady.current = true;
-      popupRef.current = new atlas.Popup({ closeButton: true, pixelOffset: [0, -10] });
+    // Sort within each day
+    groups.forEach((group) => {
+      group.sort((a, b) => a.order_in_day - b.order_in_day);
     });
+    return groups;
+  }, [placesWithCoords]);
 
-    return () => {
-      isReady.current = false;
-      popupRef.current = null;
-      map.dispose();
-      mapInstance.current = null;
-    };
-  }, [azureMapsKey]);
+  const legendDays = useMemo(
+    () => Array.from(byDay.keys())
+      .filter((d): d is number => d !== null)
+      .sort((a, b) => a - b),
+    [byDay]
+  );
 
-  // Update markers/lines when places change
+  // Fit bounds when places change
   useEffect(() => {
-    const map = mapInstance.current;
-    if (!map) return;
-
-    const renderData = () => {
-      // Remove only our own layers and source (not the built-in base map ones)
-      for (const id of layerIdsRef.current) {
-        try { map.layers.remove(id); } catch { /* already removed */ }
-      }
-      layerIdsRef.current = [];
-      if (dataSourceRef.current) {
-        try { map.sources.remove(dataSourceRef.current); } catch { /* already removed */ }
-        dataSourceRef.current = null;
-      }
-
-      const dataSource = new atlas.source.DataSource();
-      map.sources.add(dataSource);
-      dataSourceRef.current = dataSource;
-
-      const placesWithCoords = places.filter((p) => p.latitude && p.longitude);
-      if (placesWithCoords.length === 0) {
-        setLegendDays([]);
-        return;
-      }
-
-      // Group by day
-      const byDay = new Map<number | null, Place[]>();
-      placesWithCoords.forEach((p) => {
-        const day = p.day_number;
-        if (!byDay.has(day)) byDay.set(day, []);
-        byDay.get(day)!.push(p);
-      });
-
-      // Track which days appear for the legend
-      const days = Array.from(byDay.keys())
-        .filter((d): d is number => d !== null)
-        .sort((a, b) => a - b);
-      setLegendDays(days);
-
-      byDay.forEach((dayPlaces, dayNum) => {
-        const color =
-          dayNum !== null
-            ? DAY_COLORS[(dayNum - 1) % DAY_COLORS.length]
-            : "#999999";
-
-        dayPlaces
-          .sort((a, b) => a.order_in_day - b.order_in_day)
-          .forEach((place) => {
-            const point = new atlas.data.Point([place.longitude!, place.latitude!]);
-            const feature = new atlas.data.Feature(point, {
-              name: place.name,
-              note: place.note || "",
-              type: place.type,
-              day: dayNum,
-              color,
-            });
-            dataSource.add(feature as any);
-          });
-
-        if (dayPlaces.length > 1) {
-          const coords = dayPlaces.map((p) => [p.longitude!, p.latitude!]);
-          const line = new atlas.data.LineString(coords);
-          dataSource.add(new atlas.data.Feature(line, { color }) as any);
-        }
-      });
-
-      const bubbleLayer = new atlas.layer.BubbleLayer(dataSource, undefined, {
-        radius: 8,
-        color: ["get", "color"] as any,
-        strokeColor: "white",
-        strokeWidth: 2,
-        filter: ["==", ["geometry-type"], "Point"] as any,
-      });
-
-      map.layers.add(bubbleLayer);
-
-      const lineLayer = new atlas.layer.LineLayer(dataSource, undefined, {
-        strokeColor: ["get", "color"] as any,
-        strokeWidth: 2,
-        strokeDashArray: [2, 2],
-        filter: ["==", ["geometry-type"], "LineString"] as any,
-      });
-
-      map.layers.add(lineLayer);
-
-      layerIdsRef.current = [bubbleLayer.getId(), lineLayer.getId()];
-
-      // Click-to-view popup on markers
-      map.events.add("click", bubbleLayer, (e: any) => {
-        if (!e.shapes || e.shapes.length === 0 || !popupRef.current) return;
-        const shape = e.shapes[0];
-        const props = typeof shape.getProperties === "function"
-          ? shape.getProperties()
-          : shape.properties;
-        const coords = typeof shape.getCoordinates === "function"
-          ? shape.getCoordinates()
-          : (shape.geometry as any)?.coordinates;
-        if (!props || !coords) return;
-
-        const noteHtml = props.note
-          ? `<div style="font-size:12px;color:#666;margin-top:4px">${props.note}</div>`
-          : "";
-        popupRef.current.setOptions({
-          position: coords,
-          content: `<div style="padding:8px 12px">
-            <div style="font-weight:600;font-size:14px">${props.name}</div>
-            <div style="font-size:12px;color:#888;margin-top:2px">${props.type}${props.day != null ? ` · Day ${props.day}` : ""}</div>
-            ${noteHtml}
-          </div>`,
-        });
-        popupRef.current.open(map);
-      });
-
-      // Fit bounds
-      const positions = placesWithCoords.map(
-        (p) => new atlas.data.Position(p.longitude!, p.latitude!)
-      );
-      if (positions.length > 0) {
-        map.setCamera({
-          bounds: atlas.data.BoundingBox.fromPositions(positions),
-          padding: 50,
-        });
-      }
-    };
-
-    if (isReady.current) {
-      renderData();
-    } else {
-      map.events.addOnce("ready", renderData);
-    }
-  }, [places]);
+    if (!map || placesWithCoords.length === 0) return;
+    const bounds = new google.maps.LatLngBounds();
+    placesWithCoords.forEach((p) => {
+      bounds.extend({ lat: p.latitude!, lng: p.longitude! });
+    });
+    map.fitBounds(bounds, 50);
+  }, [map, placesWithCoords]);
 
   // Fly to selected place
   useEffect(() => {
-    if (!selectedPlaceId || !mapInstance.current || !isReady.current) return;
+    if (!map || !selectedPlaceId) return;
     const place = places.find((p) => p.id === selectedPlaceId);
     if (!place?.latitude || !place?.longitude) return;
-    mapInstance.current.setCamera({
-      center: [place.longitude, place.latitude],
-      zoom: 15,
-      type: "fly" as any,
-    });
-  }, [selectedPlaceId, places]);
+    map.panTo({ lat: place.latitude, lng: place.longitude });
+    map.setZoom(15);
+  }, [map, selectedPlaceId, places]);
 
-  if (!azureMapsKey) {
-    return (
-      <div className="w-full h-full min-h-[400px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
-        Set VITE_AZURE_MAPS_KEY to enable map
-      </div>
-    );
-  }
+  // Draw polylines
+  useEffect(() => {
+    if (!map) return;
+    const polylines: google.maps.Polyline[] = [];
+
+    byDay.forEach((dayPlaces, dayNum) => {
+      if (dayPlaces.length < 2) return;
+      const color = dayNum !== null
+        ? DAY_COLORS[(dayNum - 1) % DAY_COLORS.length]
+        : "#999999";
+      const path = dayPlaces.map((p) => ({ lat: p.latitude!, lng: p.longitude! }));
+      const polyline = new google.maps.Polyline({
+        path,
+        strokeColor: color,
+        strokeWeight: 2,
+        strokeOpacity: 0.8,
+        geodesic: true,
+        map,
+      });
+      polylines.push(polyline);
+    });
+
+    return () => {
+      polylines.forEach((p) => p.setMap(null));
+    };
+  }, [map, byDay]);
 
   return (
-    <div className="relative w-full h-full min-h-[400px]">
-      <div ref={mapRef} className="w-full h-full min-h-[400px] rounded-lg" />
+    <>
+      {placesWithCoords.map((place) => {
+        const dayNum = place.day_number;
+        const color = dayNum !== null
+          ? DAY_COLORS[(dayNum - 1) % DAY_COLORS.length]
+          : "#999999";
+        return (
+          <AdvancedMarker
+            key={place.id}
+            position={{ lat: place.latitude!, lng: place.longitude! }}
+            onClick={() => setSelectedPlace(place)}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: "50%",
+                backgroundColor: color,
+                border: "2px solid white",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+              }}
+            />
+          </AdvancedMarker>
+        );
+      })}
+
+      {selectedPlace && selectedPlace.latitude && selectedPlace.longitude && (
+        <InfoWindow
+          position={{ lat: selectedPlace.latitude, lng: selectedPlace.longitude }}
+          onCloseClick={() => setSelectedPlace(null)}
+        >
+          <div style={{ padding: "4px 8px" }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{selectedPlace.name}</div>
+            <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+              {selectedPlace.type}
+              {selectedPlace.day_number != null ? ` · Day ${selectedPlace.day_number}` : ""}
+            </div>
+            {selectedPlace.note && (
+              <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{selectedPlace.note}</div>
+            )}
+          </div>
+        </InfoWindow>
+      )}
+
       {legendDays.length > 0 && (
-        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg px-3 py-2 shadow text-xs flex gap-3">
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg px-3 py-2 shadow text-xs flex gap-3" style={{ zIndex: 1 }}>
           {legendDays.map((day) => (
             <div key={day} className="flex items-center gap-1">
               <span
@@ -227,6 +155,33 @@ export function TripMap({ places, azureMapsKey, selectedPlaceId }: Props) {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+export function TripMap({ places, googleMapsApiKey, selectedPlaceId }: Props) {
+  if (!googleMapsApiKey) {
+    return (
+      <div className="w-full h-full min-h-[400px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+        Set VITE_GOOGLE_MAPS_API_KEY to enable map
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[400px]">
+      <APIProvider apiKey={googleMapsApiKey}>
+        <GoogleMap
+          className="w-full h-full min-h-[400px] rounded-lg"
+          defaultCenter={{ lat: 35.6812, lng: 139.7671 }}
+          defaultZoom={11}
+          mapId="travel-copilot-map"
+          gestureHandling="greedy"
+          disableDefaultUI={false}
+        >
+          <MapContent places={places} selectedPlaceId={selectedPlaceId} />
+        </GoogleMap>
+      </APIProvider>
     </div>
   );
 }

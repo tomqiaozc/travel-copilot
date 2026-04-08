@@ -7,7 +7,7 @@ import { TripMap } from "../components/TripMap";
 import { PlanPromptModal } from "../components/PlanPromptModal";
 import type { Place } from "../types";
 
-const AZURE_MAPS_KEY = import.meta.env.VITE_AZURE_MAPS_KEY || "";
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export function PlannerPage() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -144,7 +144,7 @@ export function PlannerPage() {
 
         {/* Right: Map */}
         <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
-          <TripMap places={places} azureMapsKey={AZURE_MAPS_KEY} selectedPlaceId={selectedPlaceId} />
+          <TripMap places={places} googleMapsApiKey={GOOGLE_MAPS_KEY} selectedPlaceId={selectedPlaceId} />
         </div>
       </div>
 

@@ -30,8 +30,11 @@ class Settings(BaseSettings):
     github_models_endpoint: str = "https://models.inference.ai.azure.com"
     ai_model: str = "gpt-4o"
 
-    # Azure Maps
+    # Azure Maps (legacy, kept for reference)
     azure_maps_key: str = ""
+
+    # Google Maps Platform
+    google_maps_api_key: str = ""
 
     # Local dev mode
     use_local_db: bool = False

@@ -64,6 +64,7 @@ async def extract_from_screenshots(
         for place, geo in zip(places, geo_results):
             place["latitude"] = geo.get("latitude")
             place["longitude"] = geo.get("longitude")
+            place["google_place_id"] = geo.get("google_place_id")
 
     return {
         "places": places,
@@ -104,9 +105,11 @@ async def plan_trip(
         for place, geo in zip(needs_geocoding, geo_results):
             place["latitude"] = geo["latitude"]
             place["longitude"] = geo["longitude"]
+            place["google_place_id"] = geo.get("google_place_id")
             update_place(place["id"], trip_id, {
                 "latitude": geo["latitude"],
                 "longitude": geo["longitude"],
+                "google_place_id": geo.get("google_place_id"),
             })
 
     # Calculate number of days from trip dates

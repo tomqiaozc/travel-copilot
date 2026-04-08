@@ -12,10 +12,12 @@ async def test_geocode_place():
     mock_response.json.return_value = {
         "results": [
             {
-                "position": {"lat": 35.7148, "lon": 139.7967},
-                "address": {"freeformAddress": "Senso-ji, Tokyo"},
+                "geometry": {"location": {"lat": 35.7148, "lng": 139.7967}},
+                "formatted_address": "Senso-ji, Tokyo",
+                "place_id": "ChIJ82XhAEuMGGARqBqkPGiMaMA",
             }
-        ]
+        ],
+        "status": "OK",
     }
     mock_response.raise_for_status = MagicMock()
 
@@ -30,6 +32,7 @@ async def test_geocode_place():
 
     assert result["latitude"] == 35.7148
     assert result["longitude"] == 139.7967
+    assert result["google_place_id"] == "ChIJ82XhAEuMGGARqBqkPGiMaMA"
 
 
 def test_calculate_distance_km():

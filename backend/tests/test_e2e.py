@@ -4,11 +4,11 @@ E2E Integration Test — Travel Copilot
 Tests the full pipeline with real APIs:
 1. Read Kobe travel guide screenshots
 2. AI extracts POIs via GitHub Models (claude-sonnet-4.6 Vision)
-3. Geocode extracted places via Azure Maps
+3. Geocode extracted places via Google Maps Geocoding API
 4. AI plans itinerary
 5. Generate Google Maps export links
 
-Requires GITHUB_TOKEN and AZURE_MAPS_KEY in .env
+Requires GITHUB_TOKEN and GOOGLE_MAPS_API_KEY in .env
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ async def main():
 
     # Verify API keys are set
     assert settings.github_token, "GITHUB_TOKEN not set"
-    assert settings.azure_maps_key, "AZURE_MAPS_KEY not set"
+    assert settings.google_maps_api_key, "GOOGLE_MAPS_API_KEY not set"
     print(f"AI Model: {settings.ai_model}")
     print(f"GitHub Models Endpoint: {settings.github_models_endpoint}")
     print()
@@ -66,7 +66,7 @@ async def main():
 
     # Step 2: Geocode places with location hint
     print(f"\n{'='*60}")
-    print("STEP 2: Geocode Places via Azure Maps")
+    print("STEP 2: Geocode Places via Google Maps")
     print(f"{'='*60}")
     location_hint = "Kobe, Japan"
     print(f"  Location hint: {location_hint}")
