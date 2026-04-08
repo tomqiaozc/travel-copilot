@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import statistics
 from typing import Optional
 
 import httpx
@@ -77,7 +78,7 @@ def _validate_result(
 
     # Check against reference point (already-geocoded place in same trip)
     if ref_lat is not None and ref_lon is not None:
-        if calculate_distance_km(lat, lon, ref_lat, ref_lon) > 500:
+        if calculate_distance_km(lat, lon, ref_lat, ref_lon) > 80:
             return False
 
     # Check against country center
@@ -136,18 +137,23 @@ async def geocode_place(
     prioritizing local language > English > Chinese for Azure Maps matching.
     """
     # Build strategies: (query, country_set) — ordered by priority
+    # For each name variant, try with and without city context (location_hint)
     strategies: list[tuple[str, Optional[str]]] = []
 
     if name_local:
+        if location_hint:
+            strategies.append((f"{name_local}, {location_hint}", country_code))
         strategies.append((name_local, country_code))
     if name_en:
+        if location_hint:
+            strategies.append((f"{name_en}, {location_hint}", country_code))
         strategies.append((name_en, country_code))
-    # Chinese name with country restriction
+    # Chinese name with city context
+    if location_hint:
+        strategies.append((f"{name}, {location_hint}", country_code))
+    # Chinese name with country only
     if country_code:
         strategies.append((name, country_code))
-    # Chinese name with location hint
-    if location_hint:
-        strategies.append((f"{name}, {location_hint}", None))
     # Last resort: name alone
     if not strategies:
         strategies.append((name, None))
@@ -169,12 +175,59 @@ async def geocode_place(
     return {"latitude": None, "longitude": None}
 
 
+def _compute_cluster_center(
+    results: list[dict],
+) -> Optional[tuple[float, float]]:
+    """Compute median lat/lon from successful geocoding results."""
+    lats = [r["latitude"] for r in results if r["latitude"] is not None]
+    lons = [r["longitude"] for r in results if r["longitude"] is not None]
+    if len(lats) < 2:
+        return None
+    return (statistics.median(lats), statistics.median(lons))
+
+
+async def _reverse_geocode_city(lat: float, lon: float) -> Optional[str]:
+    """Reverse geocode coordinates to get the local city name."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://atlas.microsoft.com/search/address/reverse/json",
+                params={
+                    "api-version": "1.0",
+                    "subscription-key": settings.azure_maps_key,
+                    "query": f"{lat},{lon}",
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        addresses = data.get("addresses", [])
+        if addresses:
+            addr = addresses[0].get("address", {})
+            # Prefer municipalitySubdivision (more specific), then municipality
+            city = (
+                addr.get("municipalitySubdivision")
+                or addr.get("municipality")
+            )
+            if city:
+                logger.info("Reverse geocoded cluster center to city: %s", city)
+                return city
+    except Exception:
+        logger.warning("Reverse geocode failed for (%.4f, %.4f)", lat, lon, exc_info=True)
+    return None
+
+
 async def geocode_places(
     places: list[dict],
     location_hint: str = "",
     country_code: Optional[str] = None,
 ) -> list[dict]:
-    """Geocode multiple places concurrently, using first success as reference."""
+    """Geocode multiple places concurrently with cluster-based validation.
+
+    1. First pass: geocode all places concurrently (country-level constraint only).
+    2. Compute median cluster center from results.
+    3. Second pass: re-geocode outliers (>50km from cluster) AND failed places,
+       using the cluster center as a geographic bias for Azure Maps.
+    """
     # First pass: geocode all places concurrently
     tasks = [
         geocode_place(
@@ -188,42 +241,59 @@ async def geocode_places(
     ]
     first_pass = await asyncio.gather(*tasks)
 
-    # Find first valid result as reference point
-    ref_lat: Optional[float] = None
-    ref_lon: Optional[float] = None
-    for r in first_pass:
-        if r["latitude"] is not None:
-            ref_lat, ref_lon = r["latitude"], r["longitude"]
-            break
+    # Compute cluster center from all successful results
+    center = _compute_cluster_center(first_pass)
+    if center is None:
+        return first_pass
 
-    # If we have a reference, re-geocode failed ones with reference bias
-    results = []
-    retry_tasks = []
+    center_lat, center_lon = center
+    logger.info("Cluster center: (%.4f, %.4f)", center_lat, center_lon)
+
+    # Identify outliers (>50km from cluster) and failed geocodes
     retry_indices = []
     for i, r in enumerate(first_pass):
-        if r["latitude"] is not None:
-            results.append(r)
-        else:
-            results.append(r)  # placeholder
-            if ref_lat is not None:
-                retry_indices.append(i)
-                p = places[i]
-                retry_tasks.append(
-                    geocode_place(
-                        name=p["name"],
-                        location_hint=location_hint,
-                        name_local=p.get("name_local"),
-                        name_en=p.get("name_en"),
-                        country_code=country_code,
-                        ref_lat=ref_lat,
-                        ref_lon=ref_lon,
-                    )
-                )
+        if r["latitude"] is None:
+            retry_indices.append(i)
+        elif calculate_distance_km(
+            r["latitude"], r["longitude"], center_lat, center_lon
+        ) > 50:
+            logger.info(
+                "Outlier detected: '%s' at (%.4f, %.4f), %.0fkm from cluster",
+                places[i]["name"], r["latitude"], r["longitude"],
+                calculate_distance_km(
+                    r["latitude"], r["longitude"], center_lat, center_lon
+                ),
+            )
+            retry_indices.append(i)
 
-    if retry_tasks:
-        retry_results = await asyncio.gather(*retry_tasks)
-        for idx, retry_r in zip(retry_indices, retry_results):
-            if retry_r["latitude"] is not None:
-                results[idx] = retry_r
+    if not retry_indices:
+        return first_pass
+
+    # Reverse geocode the cluster center to get a local city name
+    city_hint = await _reverse_geocode_city(center_lat, center_lon)
+    retry_hint = city_hint or location_hint
+
+    # Second pass: re-geocode with cluster center as reference + city name hint
+    retry_tasks = [
+        geocode_place(
+            name=places[i]["name"],
+            location_hint=retry_hint,
+            name_local=places[i].get("name_local"),
+            name_en=places[i].get("name_en"),
+            country_code=country_code,
+            ref_lat=center_lat,
+            ref_lon=center_lon,
+        )
+        for i in retry_indices
+    ]
+    retry_results = await asyncio.gather(*retry_tasks)
+
+    results = list(first_pass)
+    for idx, retry_r in zip(retry_indices, retry_results):
+        if retry_r["latitude"] is not None:
+            results[idx] = retry_r
+        # Keep first-pass result (even if outlier) when retry fails entirely
+        elif first_pass[idx]["latitude"] is not None:
+            results[idx] = first_pass[idx]
 
     return results
