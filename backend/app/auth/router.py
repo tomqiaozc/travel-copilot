@@ -81,7 +81,10 @@ async def google_auth(body: GoogleAuthRequest):
     token = create_token(
         {"sub": user_id, "email": user_doc["email"], "name": user_doc["name"]}
     )
-    return {"token": token, "user": user_doc}
+    # Strip sensitive Google token fields before sending to frontend
+    sensitive_fields = {"google_access_token", "google_refresh_token", "google_token_expires_at"}
+    response_user = {k: v for k, v in user_doc.items() if k not in sensitive_fields}
+    return {"token": token, "user": response_user}
 
 
 @router.post("/dev-login")

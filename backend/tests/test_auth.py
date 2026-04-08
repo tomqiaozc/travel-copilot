@@ -56,6 +56,8 @@ def test_google_auth_callback(client, mock_get_container):
         data = resp.json()
         assert "token" in data
         assert data["user"]["email"] == "user@gmail.com"
+        assert "google_access_token" not in data["user"]
+        assert "google_refresh_token" not in data["user"]
 
 
 def test_google_auth_stores_tokens(client, mock_get_container):
@@ -87,7 +89,10 @@ def test_google_auth_stores_tokens(client, mock_get_container):
         call_args = mock_get_container.return_value.create_item.call_args
         if call_args is None:
             call_args = mock_get_container.return_value.replace_item.call_args
-        user_doc = call_args[1].get("body") or call_args[0][0] if call_args[0] else call_args[1]["body"]
+        body = call_args.kwargs.get("body")
+        if body is None and call_args.args:
+            body = call_args.args[0]
+        user_doc = body
         assert user_doc["google_access_token"] == "ya29.test-access-token"
         assert user_doc["google_refresh_token"] == "1//test-refresh-token"
         assert "google_token_expires_at" in user_doc
