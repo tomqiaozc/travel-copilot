@@ -8,7 +8,7 @@ from app.ai.extract import extract_places_from_images
 from app.ai.planner import plan_itinerary
 from app.images import repository as image_repo
 from app.places.repository import list_places, update_place
-from app.maps.geocoding import geocode_places
+from app.maps.geocoding import geocode_places, invalidate_outliers
 from app.trips.repository import get_trip, update_trip
 
 router = APIRouter(prefix="/api/trips/{trip_id}", tags=["ai"])
@@ -71,7 +71,13 @@ async def plan_trip(
     if not places:
         raise HTTPException(status_code=400, detail="No places to plan")
 
-    # Geocode places that don't have coordinates yet
+    # Clear coordinates for places that are outliers from the cluster
+    # (likely wrong results from a previous geocoding run)
+    invalidated = invalidate_outliers(places)
+    for p in invalidated:
+        update_place(p["id"], trip_id, {"latitude": None, "longitude": None})
+
+    # Geocode places that don't have coordinates
     needs_geocoding = [p for p in places if p.get("latitude") is None]
     if needs_geocoding:
         country_code = trip.get("country_code")

@@ -186,6 +186,35 @@ def _compute_cluster_center(
     return (statistics.median(lats), statistics.median(lons))
 
 
+def invalidate_outliers(places: list[dict], threshold_km: float = 50) -> list[dict]:
+    """Detect and clear coordinates of outlier places.
+
+    Computes a median cluster center from all places with coordinates,
+    then nullifies lat/lon for any place >threshold_km from the center.
+    Returns the list of places whose coordinates were cleared.
+    """
+    center = _compute_cluster_center(places)
+    if center is None:
+        return []
+
+    center_lat, center_lon = center
+    invalidated = []
+    for p in places:
+        lat, lon = p.get("latitude"), p.get("longitude")
+        if lat is None:
+            continue
+        dist = calculate_distance_km(lat, lon, center_lat, center_lon)
+        if dist > threshold_km:
+            logger.info(
+                "Invalidating outlier '%s': (%.4f, %.4f) is %.0fkm from cluster",
+                p.get("name", "?"), lat, lon, dist,
+            )
+            p["latitude"] = None
+            p["longitude"] = None
+            invalidated.append(p)
+    return invalidated
+
+
 async def _reverse_geocode_city(lat: float, lon: float) -> Optional[str]:
     """Reverse geocode coordinates to get the local city name."""
     try:
@@ -292,8 +321,8 @@ async def geocode_places(
     for idx, retry_r in zip(retry_indices, retry_results):
         if retry_r["latitude"] is not None:
             results[idx] = retry_r
-        # Keep first-pass result (even if outlier) when retry fails entirely
-        elif first_pass[idx]["latitude"] is not None:
-            results[idx] = first_pass[idx]
+        else:
+            # Retry failed — discard the outlier rather than keeping wrong coords
+            results[idx] = {"latitude": None, "longitude": None}
 
     return results

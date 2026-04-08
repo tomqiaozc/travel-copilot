@@ -44,8 +44,7 @@ def update_place(place_id: str, trip_id: str, data: dict):
     except CosmosResourceNotFoundError:
         return None
     for key, value in data.items():
-        if value is not None:
-            existing[key] = value
+        existing[key] = value
     container.replace_item(item=place_id, body=existing, partition_key=trip_id)
     return existing
 
