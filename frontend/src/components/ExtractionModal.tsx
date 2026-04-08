@@ -69,6 +69,9 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
                     onChange={(e) => editPlace(i, "name", e.target.value)}
                     className="w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none"
                   />
+                  {edited.name_local && (
+                    <div className="text-xs text-gray-400 mt-0.5">{edited.name_local}</div>
+                  )}
                   <select
                     value={edited.type}
                     onChange={(e) => editPlace(i, "type", e.target.value)}

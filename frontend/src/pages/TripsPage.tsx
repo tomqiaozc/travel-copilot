@@ -8,6 +8,7 @@ export function TripsPage() {
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [countryCode, setCountryCode] = useState("");
 
   useEffect(() => {
     fetchTrips();
@@ -15,10 +16,16 @@ export function TripsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createTrip({ name, start_date: startDate, end_date: endDate });
+    await createTrip({
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      country_code: countryCode || undefined,
+    });
     setName("");
     setStartDate("");
     setEndDate("");
+    setCountryCode("");
     setShowForm(false);
   };
 
@@ -70,6 +77,29 @@ export function TripsPage() {
               className="flex-1 border rounded-lg px-3 py-2 text-sm"
             />
           </div>
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm text-gray-700"
+          >
+            <option value="">Country (optional)</option>
+            <option value="JP">Japan</option>
+            <option value="KR">South Korea</option>
+            <option value="TH">Thailand</option>
+            <option value="TW">Taiwan</option>
+            <option value="VN">Vietnam</option>
+            <option value="SG">Singapore</option>
+            <option value="MY">Malaysia</option>
+            <option value="ID">Indonesia</option>
+            <option value="PH">Philippines</option>
+            <option value="US">United States</option>
+            <option value="GB">United Kingdom</option>
+            <option value="FR">France</option>
+            <option value="IT">Italy</option>
+            <option value="DE">Germany</option>
+            <option value="ES">Spain</option>
+            <option value="AU">Australia</option>
+          </select>
           <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
             Create
           </button>

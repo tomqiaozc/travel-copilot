@@ -55,10 +55,13 @@ export const api = {
   // Trips
   listTrips: () => request<Trip[]>("/trips"),
 
-  createTrip: (data: { name: string; start_date: string; end_date: string }) =>
+  createTrip: (data: { name: string; start_date: string; end_date: string; country_code?: string }) =>
     request<Trip>("/trips", { method: "POST", body: JSON.stringify(data) }),
 
   getTrip: (id: string) => request<Trip>(`/trips/${id}`),
+
+  updateTrip: (id: string, data: Record<string, unknown>) =>
+    request<Trip>(`/trips/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
   deleteTrip: (id: string) =>
     request<void>(`/trips/${id}`, { method: "DELETE" }),
@@ -66,7 +69,7 @@ export const api = {
   // Places
   listPlaces: (tripId: string) => request<Place[]>(`/trips/${tripId}/places`),
 
-  addPlace: (tripId: string, data: { name: string; type: string; note: string }) =>
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string }) =>
     request<Place>(`/trips/${tripId}/places`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -85,7 +88,7 @@ export const api = {
   extractPlaces: (tripId: string, images: File[]) => {
     const form = new FormData();
     images.forEach((img) => form.append("images", img));
-    return request<{ places: ExtractedPlace[] }>(`/trips/${tripId}/extract`, {
+    return request<{ places: ExtractedPlace[]; country_code?: string }>(`/trips/${tripId}/extract`, {
       method: "POST",
       body: form,
     });

@@ -25,6 +25,8 @@ def create_place(trip_id: str, data: dict, source: str = "manual") -> dict:
         "name": data["name"],
         "type": data["type"],
         "note": data.get("note", ""),
+        "name_local": data.get("name_local"),
+        "name_en": data.get("name_en"),
         "latitude": None,
         "longitude": None,
         "source": source,

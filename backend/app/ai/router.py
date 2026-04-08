@@ -9,7 +9,7 @@ from app.ai.planner import plan_itinerary
 from app.images import repository as image_repo
 from app.places.repository import list_places, update_place
 from app.maps.geocoding import geocode_places
-from app.trips.repository import get_trip
+from app.trips.repository import get_trip, update_trip
 
 router = APIRouter(prefix="/api/trips/{trip_id}", tags=["ai"])
 
@@ -50,8 +50,11 @@ async def extract_from_screenshots(
         )
 
     # Extract places using AI Vision
-    places = await extract_places_from_images(image_data_list)
-    return {"places": places}
+    result = await extract_places_from_images(image_data_list)
+    return {
+        "places": result["places"],
+        "country_code": result.get("country_code"),
+    }
 
 
 @router.post("/plan")
@@ -71,10 +74,11 @@ async def plan_trip(
     # Geocode places that don't have coordinates yet
     needs_geocoding = [p for p in places if p.get("latitude") is None]
     if needs_geocoding:
-        geocode_names = [p.get("name_local") or p["name"] for p in needs_geocoding]
+        country_code = trip.get("country_code")
         geo_results = await geocode_places(
-            geocode_names,
+            places=needs_geocoding,
             location_hint=trip.get("name", ""),
+            country_code=country_code,
         )
         for place, geo in zip(needs_geocoding, geo_results):
             place["latitude"] = geo["latitude"]

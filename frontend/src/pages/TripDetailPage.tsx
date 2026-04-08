@@ -38,7 +38,13 @@ export function TripDetailPage() {
   const handleConfirmExtracted = async (selected: ExtractedPlace[]) => {
     if (!tripId) return;
     for (const place of selected) {
-      await addPlace(tripId, { name: place.name, type: place.type, note: "" });
+      await addPlace(tripId, {
+        name: place.name,
+        type: place.type,
+        note: "",
+        name_local: place.name_local || "",
+        name_en: place.name_en || "",
+      });
     }
     setExtracted(null);
   };

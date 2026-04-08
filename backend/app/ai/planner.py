@@ -13,6 +13,7 @@ Rules:
 - Hotels don't need to be scheduled in the daily itinerary, but include all other place types
 - IMPORTANT: You MUST assign ALL non-hotel places to a day. Do not leave any place unassigned.
 - If a place has no coordinates, still assign it to a day based on context (name similarity to nearby places, or spread evenly).
+- WARNING: Some places may have INACCURATE coordinates (marked as "OUTLIER" below). Treat these as if they have no coordinates — do NOT use their position for distance-based grouping. Instead, assign them based on name/type similarity or spread evenly.
 
 Return a JSON array of daily schedules. Each place is identified by its "id" field — use the EXACT id values provided.
 
@@ -26,12 +27,33 @@ Return ONLY the JSON array, no other text."""
 
 
 def _build_places_description(places: list) -> str:
-    """Build a text description of places with distances."""
+    """Build a text description of places with distances, flagging outliers."""
+    # Detect outlier coordinates: places >300km from the median of other places
+    places_with_coords = [p for p in places if p.get("latitude") and p.get("longitude")]
+    outlier_ids: set = set()
+
+    if len(places_with_coords) >= 3:
+        # Calculate median lat/lon as cluster center
+        lats = sorted(p["latitude"] for p in places_with_coords)
+        lons = sorted(p["longitude"] for p in places_with_coords)
+        median_lat = lats[len(lats) // 2]
+        median_lon = lons[len(lons) // 2]
+
+        for p in places_with_coords:
+            dist = calculate_distance_km(p["latitude"], p["longitude"], median_lat, median_lon)
+            if dist > 300:
+                outlier_ids.add(p["id"])
+
     lines = []
     for p in places:
         lat = p.get("latitude", "unknown")
         lng = p.get("longitude", "unknown")
-        coord_str = f"({lat}, {lng})" if lat and lng else "(no coordinates)"
+        if p["id"] in outlier_ids:
+            coord_str = "(OUTLIER — coordinates likely inaccurate)"
+        elif lat and lng:
+            coord_str = f"({lat}, {lng})"
+        else:
+            coord_str = "(no coordinates)"
         lines.append(f"- id={p['id']}: {p['name']} ({p['type']}) {coord_str}")
 
     # Add distance matrix for places that have coordinates

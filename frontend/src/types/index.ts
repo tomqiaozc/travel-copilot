@@ -11,6 +11,7 @@ export interface Trip {
   name: string;
   start_date: string;
   end_date: string;
+  country_code?: string;
   created_at: string;
 }
 
@@ -18,6 +19,8 @@ export interface Place {
   id: string;
   trip_id: string;
   name: string;
+  name_local?: string;
+  name_en?: string;
   type: "attraction" | "restaurant" | "hotel" | "other";
   note: string;
   latitude: number | null;
@@ -29,6 +32,8 @@ export interface Place {
 
 export interface ExtractedPlace {
   name: string;
+  name_local?: string;
+  name_en?: string;
   type: string;
 }
 

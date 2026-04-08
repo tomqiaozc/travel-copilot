@@ -38,6 +38,7 @@ def create_trip(user_id: str, data: dict) -> dict:
         "name": data["name"],
         "start_date": data["start_date"],
         "end_date": data["end_date"],
+        "country_code": data.get("country_code"),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     container.create_item(body=doc)
