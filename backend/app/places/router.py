@@ -26,7 +26,7 @@ async def create_place(
     trip_id: str, body: PlaceCreate, user: dict = Depends(get_current_user)
 ):
     _verify_trip_access(trip_id, user)
-    return repository.create_place(trip_id, body.model_dump())
+    return repository.create_place(trip_id, body.model_dump(), source=body.source or "manual")
 
 
 @router.put("/{place_id}")

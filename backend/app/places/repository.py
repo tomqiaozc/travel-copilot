@@ -27,11 +27,11 @@ def create_place(trip_id: str, data: dict, source: str = "manual") -> dict:
         "note": data.get("note", ""),
         "name_local": data.get("name_local"),
         "name_en": data.get("name_en"),
-        "latitude": None,
-        "longitude": None,
-        "source": source,
-        "day_number": None,
-        "order_in_day": 0,
+        "latitude": data.get("latitude"),
+        "longitude": data.get("longitude"),
+        "source": data.get("source") or source,
+        "day_number": data.get("day_number"),
+        "order_in_day": data.get("order_in_day", 0),
     }
     container.create_item(body=doc)
     return doc

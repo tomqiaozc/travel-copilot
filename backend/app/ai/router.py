@@ -51,9 +51,24 @@ async def extract_from_screenshots(
 
     # Extract places using AI Vision
     result = await extract_places_from_images(image_data_list)
+    places = result["places"]
+    country_code = result.get("country_code")
+
+    # Geocode all places together (each place carries its own city hint)
+    if places:
+        geo_results = await geocode_places(
+            places=places,
+            location_hint="",
+            country_code=country_code,
+        )
+        for place, geo in zip(places, geo_results):
+            place["latitude"] = geo.get("latitude")
+            place["longitude"] = geo.get("longitude")
+
     return {
-        "places": result["places"],
-        "country_code": result.get("country_code"),
+        "places": places,
+        "country_code": country_code,
+        "cities": result.get("cities", []),
     }
 
 

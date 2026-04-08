@@ -258,10 +258,11 @@ async def geocode_places(
        using the cluster center as a geographic bias for Azure Maps.
     """
     # First pass: geocode all places concurrently
+    # Each place can have its own city hint; fall back to the shared location_hint
     tasks = [
         geocode_place(
             name=p["name"],
-            location_hint=location_hint,
+            location_hint=p.get("city") or location_hint,
             name_local=p.get("name_local"),
             name_en=p.get("name_en"),
             country_code=country_code,

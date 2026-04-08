@@ -44,6 +44,11 @@ export function TripDetailPage() {
         note: "",
         name_local: place.name_local || "",
         name_en: place.name_en || "",
+        latitude: place.latitude,
+        longitude: place.longitude,
+        day_number: place.day_number,
+        order_in_day: place.order_in_day,
+        source: "ai_extracted",
       });
     }
     setExtracted(null);

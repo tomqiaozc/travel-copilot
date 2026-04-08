@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { ExtractedPlace } from "../types";
 
 interface Props {
@@ -35,6 +35,23 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
     onConfirm(result);
   };
 
+  // Group places by day_number
+  const dayGroups = useMemo(() => {
+    const groups = new Map<number | null, { index: number; place: ExtractedPlace }[]>();
+    places.forEach((place, index) => {
+      const key = place.day_number ?? null;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push({ index, place });
+    });
+    // Sort day keys: numbered days first (ascending), then null (unassigned)
+    const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return a - b;
+    });
+    return sortedKeys.map((key) => ({ dayNumber: key, items: groups.get(key)! }));
+  }, [places]);
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col">
@@ -46,46 +63,62 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
             Close
           </button>
         </div>
-        <div className="p-4 overflow-y-auto flex-1 space-y-2">
-          {places.map((place, i) => {
-            const edited = edits.get(i) || place;
-            return (
-              <div
-                key={i}
-                className={`border rounded-lg p-3 flex items-start gap-3 ${
-                  selected.has(i) ? "border-blue-300 bg-blue-50" : "border-gray-200"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(i)}
-                  onChange={() => toggle(i)}
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={edited.name}
-                    onChange={(e) => editPlace(i, "name", e.target.value)}
-                    className="w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none"
-                  />
-                  {edited.name_local && (
-                    <div className="text-xs text-gray-400 mt-0.5">{edited.name_local}</div>
-                  )}
-                  <select
-                    value={edited.type}
-                    onChange={(e) => editPlace(i, "type", e.target.value)}
-                    className="text-xs text-gray-500 mt-1 bg-transparent border-none p-0"
-                  >
-                    <option value="attraction">attraction</option>
-                    <option value="restaurant">restaurant</option>
-                    <option value="hotel">hotel</option>
-                    <option value="other">other</option>
-                  </select>
-                </div>
+        <div className="p-4 overflow-y-auto flex-1 space-y-1">
+          {dayGroups.map(({ dayNumber, items }) => (
+            <div key={dayNumber ?? "unassigned"}>
+              <div className="text-xs font-semibold text-gray-500 mt-3 mb-1">
+                {dayNumber != null ? `Day ${dayNumber}` : "Unassigned"}
               </div>
-            );
-          })}
+              {items.map(({ index }) => {
+                const edited = edits.get(index) || places[index];
+                const hasCoords = edited.latitude != null;
+                return (
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-3 flex items-start gap-3 mb-2 ${
+                      selected.has(index) ? "border-blue-300 bg-blue-50" : "border-gray-200"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(index)}
+                      onChange={() => toggle(index)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[8px] ${hasCoords ? "text-green-500" : "text-gray-300"}`}
+                          title={hasCoords ? "Geocoded" : "Not geocoded"}
+                        >
+                          ●
+                        </span>
+                        <input
+                          type="text"
+                          value={edited.name}
+                          onChange={(e) => editPlace(index, "name", e.target.value)}
+                          className="w-full border-none bg-transparent font-medium text-sm p-0 focus:outline-none"
+                        />
+                      </div>
+                      {edited.name_local && (
+                        <div className="text-xs text-gray-400 mt-0.5 ml-4">{edited.name_local}</div>
+                      )}
+                      <select
+                        value={edited.type}
+                        onChange={(e) => editPlace(index, "type", e.target.value)}
+                        className="text-xs text-gray-500 mt-1 ml-4 bg-transparent border-none p-0"
+                      >
+                        <option value="attraction">attraction</option>
+                        <option value="restaurant">restaurant</option>
+                        <option value="hotel">hotel</option>
+                        <option value="other">other</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
         <div className="p-4 border-t flex gap-3">
           <button

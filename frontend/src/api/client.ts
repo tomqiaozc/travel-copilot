@@ -69,7 +69,7 @@ export const api = {
   // Places
   listPlaces: (tripId: string) => request<Place[]>(`/trips/${tripId}/places`),
 
-  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string }) =>
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; day_number?: number | null; order_in_day?: number | null; source?: string }) =>
     request<Place>(`/trips/${tripId}/places`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -88,7 +88,7 @@ export const api = {
   extractPlaces: (tripId: string, images: File[]) => {
     const form = new FormData();
     images.forEach((img) => form.append("images", img));
-    return request<{ places: ExtractedPlace[]; country_code?: string }>(`/trips/${tripId}/extract`, {
+    return request<{ places: ExtractedPlace[]; country_code?: string; cities?: string[] }>(`/trips/${tripId}/extract`, {
       method: "POST",
       body: form,
     });

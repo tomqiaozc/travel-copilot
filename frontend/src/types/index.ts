@@ -35,6 +35,11 @@ export interface ExtractedPlace {
   name_local?: string;
   name_en?: string;
   type: string;
+  city?: string;
+  day_number?: number | null;
+  order_in_day?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface DaySchedule {

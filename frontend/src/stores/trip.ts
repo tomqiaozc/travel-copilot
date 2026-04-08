@@ -13,7 +13,7 @@ interface TripState {
   deleteTrip: (id: string) => Promise<void>;
   fetchTripDetail: (id: string) => Promise<void>;
   fetchPlaces: (tripId: string) => Promise<void>;
-  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string }) => Promise<void>;
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; day_number?: number | null; order_in_day?: number | null; source?: string }) => Promise<void>;
   updatePlace: (tripId: string, placeId: string, data: Record<string, unknown>) => Promise<void>;
   deletePlace: (tripId: string, placeId: string) => Promise<void>;
   extractPlaces: (tripId: string, images: File[]) => Promise<ExtractedPlace[]>;
