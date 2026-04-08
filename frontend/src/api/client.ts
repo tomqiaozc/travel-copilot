@@ -1,4 +1,4 @@
-import type { User, Trip, Place, ExtractedPlace, DaySchedule, ExportLink } from "../types";
+import type { User, Trip, Place, ExtractedPlace, DaySchedule, ExportLink, ResolvedPlace } from "../types";
 
 const API_BASE = "/api";
 
@@ -103,4 +103,19 @@ export const api = {
   // Export
   exportGoogleMaps: (tripId: string) =>
     request<{ links: ExportLink[] }>(`/trips/${tripId}/export/google-maps`),
+
+  resolveGoogleLink: (tripId: string, url: string) =>
+    request<ResolvedPlace>(`/trips/${tripId}/places/resolve-google-link`, {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+
+  exportKml: async (tripId: string): Promise<Blob> => {
+    const token = localStorage.getItem("token");
+    const resp = await fetch(`/api/trips/${tripId}/export/kml`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.blob();
+  },
 };

@@ -54,3 +54,12 @@ export interface ExportLink {
   url: string;
   place_count: number;
 }
+
+export interface ResolvedPlace {
+  name: string;
+  type: string;
+  latitude: number;
+  longitude: number;
+  google_place_id: string;
+  formatted_address: string;
+}

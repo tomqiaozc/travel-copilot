@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { api } from "../api/client";
-import type { Trip, Place, ExtractedPlace, ExportLink } from "../types";
+import type { Trip, Place, ExtractedPlace, ExportLink, ResolvedPlace } from "../types";
 
 interface TripState {
   trips: Trip[];
@@ -20,6 +20,7 @@ interface TripState {
   updateTrip: (tripId: string, data: Record<string, unknown>) => Promise<void>;
   planTrip: (tripId: string, userPrompt?: string) => Promise<void>;
   exportGoogleMaps: (tripId: string) => Promise<ExportLink[]>;
+  resolveGoogleLink: (tripId: string, url: string) => Promise<ResolvedPlace>;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
@@ -111,5 +112,9 @@ export const useTripStore = create<TripState>((set, get) => ({
   exportGoogleMaps: async (tripId) => {
     const result = await api.exportGoogleMaps(tripId);
     return result.links;
+  },
+
+  resolveGoogleLink: async (tripId, url) => {
+    return api.resolveGoogleLink(tripId, url);
   },
 }));
