@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTripStore } from "../stores/trip";
 
 interface Props {
-  onSubmit: (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; source?: string }) => void;
+  onSubmit: (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; source?: string }) => void;
   tripId: string;
 }
 
@@ -34,6 +34,7 @@ export function PlaceForm({ onSubmit, tripId }: Props) {
         latitude: resolved.latitude,
         longitude: resolved.longitude,
         google_place_id: resolved.google_place_id,
+        google_maps_url: resolved.google_maps_url,
         source: "manual",
       });
       setUrl("");

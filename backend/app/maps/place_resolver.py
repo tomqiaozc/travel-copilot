@@ -55,11 +55,19 @@ def parse_google_maps_url(url: str) -> dict:
     if place_id_match:
         result["place_id"] = place_id_match.group(1)
 
-    # Extract coordinates from /@lat,lng pattern
-    coord_match = re.search(r"/@(-?\d+\.?\d*),(-?\d+\.?\d*)", url)
-    if coord_match:
-        result["lat"] = float(coord_match.group(1))
-        result["lng"] = float(coord_match.group(2))
+    # Extract actual place coordinates from data params: !3d<lat>!4d<lng>
+    # These are the real place location, unlike /@lat,lng which is the viewport center
+    lat_match = re.search(r"!3d(-?\d+\.?\d*)", url)
+    lng_match = re.search(r"!4d(-?\d+\.?\d*)", url)
+    if lat_match and lng_match:
+        result["lat"] = float(lat_match.group(1))
+        result["lng"] = float(lng_match.group(1))
+    else:
+        # Fallback to viewport coordinates if no data params
+        coord_match = re.search(r"/@(-?\d+\.?\d*),(-?\d+\.?\d*)", url)
+        if coord_match:
+            result["lat"] = float(coord_match.group(1))
+            result["lng"] = float(coord_match.group(2))
 
     # Extract place name from /place/Name/ pattern
     name_match = re.search(r"/place/([^/@]+)", parsed.path)
@@ -84,7 +92,7 @@ async def fetch_place_details(place_id: str) -> dict:
     url = f"https://places.googleapis.com/v1/places/{place_id}"
     headers = {
         "X-Goog-Api-Key": settings.google_maps_api_key,
-        "X-Goog-FieldMask": "id,displayName,location,primaryType,formattedAddress",
+        "X-Goog-FieldMask": "id,displayName,location,primaryType,formattedAddress,googleMapsUri",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(url, headers=headers)
@@ -94,12 +102,19 @@ async def fetch_place_details(place_id: str) -> dict:
 
 
 async def geocode_to_place_id(query: str, lat: float | None = None, lng: float | None = None) -> str | None:
-    """Use Google Geocoding API to find a place_id from name/coordinates."""
+    """Use Google Geocoding API to find a place_id from name/coordinates.
+
+    Prefers name search (address) over reverse geocoding (latlng) when both
+    are available, since reverse geocoding returns the nearest address, not the
+    named place.
+    """
     params: dict = {"key": settings.google_maps_api_key}
-    if lat is not None and lng is not None:
+    if query:
+        params["address"] = query
+    elif lat is not None and lng is not None:
         params["latlng"] = f"{lat},{lng}"
     else:
-        params["address"] = query
+        return None
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(
@@ -115,9 +130,10 @@ async def geocode_to_place_id(query: str, lat: float | None = None, lng: float |
 async def resolve_google_maps_link(url: str) -> dict:
     """Resolve a Google Maps URL (short or full) into place details.
 
-    Returns: {name, type, latitude, longitude, google_place_id, formatted_address}
+    Returns: {name, type, latitude, longitude, google_place_id, formatted_address, google_maps_url}
     Raises ValueError on invalid URL or resolution failure.
     """
+    original_url = url
     # Step 1: Follow redirects if short link
     try:
         if "goo.gl" in url or "maps.app" in url:
@@ -151,10 +167,13 @@ async def resolve_google_maps_link(url: str) -> dict:
     except httpx.HTTPError as exc:
         raise ValueError(f"Failed to fetch place details: {exc}") from exc
 
-    display_name = details.get("displayName", {}).get("text", parsed.get("name", "Unknown"))
+    # Prefer the place name from the URL (user-facing name in their language)
+    # over the API displayName (which may be in a different language)
+    display_name = parsed.get("name") or details.get("displayName", {}).get("text", "Unknown")
     location = details.get("location", {})
     primary_type = details.get("primaryType")
 
+    # Always keep the user's original link — it's the one they copied from Google Maps
     return {
         "name": display_name,
         "type": map_google_type_to_app_type(primary_type),
@@ -162,4 +181,5 @@ async def resolve_google_maps_link(url: str) -> dict:
         "longitude": location.get("longitude"),
         "google_place_id": details.get("id", google_place_id),
         "formatted_address": details.get("formattedAddress", ""),
+        "google_maps_url": original_url,
     }

@@ -26,6 +26,7 @@ export interface Place {
   latitude: number | null;
   longitude: number | null;
   google_place_id?: string;
+  google_maps_url?: string;
   source: "ai_extracted" | "manual";
   day_number: number | null;
   order_in_day: number;
@@ -62,4 +63,5 @@ export interface ResolvedPlace {
   longitude: number;
   google_place_id: string;
   formatted_address: string;
+  google_maps_url: string;
 }

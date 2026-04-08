@@ -14,18 +14,19 @@ function PlaceCard({
 }: {
   place: Place;
   onDelete: () => void;
-  onUpdate: (data: { name: string; type: string; note: string }) => void;
+  onUpdate: (data: { name: string; type: string; note: string; google_maps_url?: string }) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(place.name);
   const [type, setType] = useState(place.type);
   const [note, setNote] = useState(place.note);
+  const [googleMapsUrlInput, setGoogleMapsUrlInput] = useState(place.google_maps_url || "");
 
   const googleMapsUrl = getGoogleMapsUrl(place);
   const TYPES = ["attraction", "restaurant", "hotel", "other"] as const;
 
   const handleSave = () => {
-    onUpdate({ name, type, note });
+    onUpdate({ name, type, note, google_maps_url: googleMapsUrlInput || undefined });
     setEditing(false);
   };
 
@@ -33,6 +34,7 @@ function PlaceCard({
     setName(place.name);
     setType(place.type);
     setNote(place.note);
+    setGoogleMapsUrlInput(place.google_maps_url || "");
     setEditing(false);
   };
 
@@ -65,6 +67,14 @@ function PlaceCard({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           className="w-full border rounded px-2 py-1 text-sm h-12 resize-none"
+          placeholder="Note"
+        />
+        <input
+          type="url"
+          value={googleMapsUrlInput}
+          onChange={(e) => setGoogleMapsUrlInput(e.target.value)}
+          className="w-full border rounded px-2 py-1 text-sm"
+          placeholder="Google Maps link (optional)"
         />
         <div className="flex gap-2 justify-end">
           <button
@@ -173,7 +183,7 @@ export function TripDetailPage() {
     setExtracted(null);
   };
 
-  const handleAddManual = async (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; source?: string }) => {
+  const handleAddManual = async (data: { name: string; type: string; note: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; source?: string }) => {
     if (tripId) await addPlace(tripId, data);
   };
 
@@ -181,7 +191,7 @@ export function TripDetailPage() {
     if (tripId) await deletePlace(tripId, placeId);
   };
 
-  const handleUpdatePlace = async (placeId: string, data: { name: string; type: string; note: string }) => {
+  const handleUpdatePlace = async (placeId: string, data: { name: string; type: string; note: string; google_maps_url?: string }) => {
     if (tripId) await updatePlace(tripId, placeId, data);
   };
 

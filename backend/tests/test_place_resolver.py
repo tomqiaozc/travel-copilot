@@ -14,10 +14,19 @@ def test_parse_place_id_from_full_url():
 
 
 def test_parse_coordinates_from_url():
+    # /@lat,lng is viewport center — used as fallback when no !3d/!4d data params
     url = "https://www.google.com/maps/place/Senso-ji/@35.7147651,139.7966553,17z/"
     result = parse_google_maps_url(url)
     assert abs(result["lat"] - 35.7147651) < 0.0001
     assert abs(result["lng"] - 139.7966553) < 0.0001
+
+
+def test_parse_coordinates_prefers_data_params():
+    # !3d/!4d are the actual place coordinates, should be preferred over /@
+    url = "https://www.google.com/maps/place/Hotel/@34.95,135.59,11z/data=!4m2!3m1!8m2!3d35.0117!4d135.7609"
+    result = parse_google_maps_url(url)
+    assert abs(result["lat"] - 35.0117) < 0.0001
+    assert abs(result["lng"] - 135.7609) < 0.0001
 
 
 def test_parse_place_url_with_ftid():
@@ -66,15 +75,21 @@ async def test_resolve_google_maps_link_with_place_id():
     }
 
     with patch("app.maps.place_resolver.follow_redirects") as mock_redirect, \
+         patch("app.maps.place_resolver.geocode_to_place_id") as mock_geocode, \
          patch("app.maps.place_resolver.fetch_place_details") as mock_details:
-        # Short link resolves to a full URL with place_id
+        # Short link resolves to a full URL with place name in path
         mock_redirect.return_value = "https://www.google.com/maps/place/Senso-ji/@35.7148,139.7967,17z/data=!4m2!3m1!1s0x60188ec1a21c296d:0x23899be09b99fa02"
+        # hex ftid is not a valid Places API ID, so geocoding is used
+        mock_geocode.return_value = "ChIJ82XhAEuMGGARqBqkPGiMaMA"
         mock_details.return_value = mock_place_details_response
 
         result = await resolve_google_maps_link("https://maps.app.goo.gl/abc123")
 
-        assert result["name"] == "浅草寺"
+        # Name comes from URL path (preferred over API displayName)
+        assert result["name"] == "Senso-ji"
         assert result["type"] == "attraction"
         assert abs(result["latitude"] - 35.7148) < 0.001
         assert abs(result["longitude"] - 139.7967) < 0.001
         assert result["google_place_id"] == "ChIJ82XhAEuMGGARqBqkPGiMaMA"
+        # Original user URL is preserved
+        assert result["google_maps_url"] == "https://maps.app.goo.gl/abc123"
