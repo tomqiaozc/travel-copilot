@@ -20,7 +20,7 @@ function PlaceCard({
   const [name, setName] = useState(place.name);
   const [type, setType] = useState(place.type);
   const [note, setNote] = useState(place.note);
-  const [googleMapsUrlInput, setGoogleMapsUrlInput] = useState(place.google_maps_url || "");
+  const [googleMapsUrlInput, setGoogleMapsUrlInput] = useState(place.google_maps_url || getGoogleMapsUrl(place) || "");
 
   const googleMapsUrl = getGoogleMapsUrl(place);
   const TYPES = ["attraction", "restaurant", "hotel", "other"] as const;
@@ -34,7 +34,7 @@ function PlaceCard({
     setName(place.name);
     setType(place.type);
     setNote(place.note);
-    setGoogleMapsUrlInput(place.google_maps_url || "");
+    setGoogleMapsUrlInput(place.google_maps_url || getGoogleMapsUrl(place) || "");
     setEditing(false);
   };
 
