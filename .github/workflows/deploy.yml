@@ -1,0 +1,73 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  packages: write
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} -f backend/Dockerfile backend
+          docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy backend to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-backend-travel-prod
+          resource-group-name: rg-rewind-ea
+          images: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        run: |
+          docker build \
+            --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }} \
+            --build-arg VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }} \
+            -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} \
+            -f frontend/Dockerfile frontend
+          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy frontend to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-frontend-travel-prod
+          resource-group-name: rg-rewind-ea
+          images: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
