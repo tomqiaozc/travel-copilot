@@ -40,9 +40,12 @@ interface Props {
   places: Place[];
   label: string;
   onPlaceClick?: (place: Place) => void;
+  tripId?: string;
+  onUpdatePlace?: (placeId: string, data: Record<string, unknown>) => void;
+  onDeletePlace?: (placeId: string) => void;
 }
 
-export function DayGroup({ dayNumber, places, label, onPlaceClick }: Props) {
+export function DayGroup({ dayNumber, places, label, onPlaceClick, tripId, onUpdatePlace, onDeletePlace }: Props) {
   const droppableId = dayNumber !== null ? `day-${dayNumber}` : "unassigned";
   const colorIdx = dayNumber !== null ? (dayNumber - 1) % DAY_COLORS.length : -1;
   const borderColor = colorIdx >= 0 ? DAY_COLORS[colorIdx] : "border-gray-300";
@@ -76,7 +79,14 @@ export function DayGroup({ dayNumber, places, label, onPlaceClick }: Props) {
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
                     >
-                      <PlaceCard place={place} distanceFromPrev={dist} onPlaceClick={onPlaceClick} />
+                      <PlaceCard
+                        place={place}
+                        distanceFromPrev={dist}
+                        onPlaceClick={onPlaceClick}
+                        tripId={tripId}
+                        onUpdate={onUpdatePlace ? (data) => onUpdatePlace(place.id, data) : undefined}
+                        onDelete={onDeletePlace ? () => onDeletePlace(place.id) : undefined}
+                      />
                     </div>
                   )}
                 </Draggable>

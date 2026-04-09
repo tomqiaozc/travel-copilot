@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { getGoogleMapsUrl } from "../utils/googleMapsLink";
 import type { Place } from "../types";
 
@@ -22,11 +23,36 @@ interface Props {
 function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlaceId?: string | null }) {
   const map = useMap();
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const markersRef = useRef<Record<string, google.maps.marker.AdvancedMarkerElement>>({});
+
+  const clusterer = useMemo(() => {
+    if (!map) return null;
+    return new MarkerClusterer({ map });
+  }, [map]);
+
+  const setMarkerRef = useCallback((marker: google.maps.marker.AdvancedMarkerElement | null, key: string) => {
+    if (marker) {
+      markersRef.current[key] = marker;
+    } else {
+      delete markersRef.current[key];
+    }
+  }, []);
 
   const placesWithCoords = useMemo(
     () => places.filter((p) => p.latitude && p.longitude),
     [places]
   );
+
+  // Sync markers with clusterer after render
+  useEffect(() => {
+    if (!clusterer) return;
+    // Short delay to let refs populate after render
+    const timer = setTimeout(() => {
+      clusterer.clearMarkers();
+      clusterer.addMarkers(Object.values(markersRef.current));
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [clusterer, placesWithCoords]);
 
   // Group by day
   const byDay = useMemo(() => {
@@ -121,6 +147,7 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
             key={place.id}
             position={{ lat: place.latitude!, lng: place.longitude! }}
             onClick={() => setSelectedPlace(place)}
+            ref={(marker) => setMarkerRef(marker, place.id)}
           >
             <div
               style={{

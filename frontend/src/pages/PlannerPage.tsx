@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
+import { toast } from "sonner";
 import { useTripStore } from "../stores/trip";
 import { DayGroup } from "../components/DayGroup";
 import { TripMap } from "../components/TripMap";
@@ -18,6 +19,7 @@ export function PlannerPage() {
     loading,
     fetchTripDetail,
     updatePlace,
+    deletePlace,
     planTrip,
   } = useTripStore();
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -92,9 +94,18 @@ export function PlannerPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("KML export failed:", e);
+      toast.success("KML file downloaded");
+    } catch {
+      toast.error("Failed to export KML");
     }
+  };
+
+  const handleUpdatePlace = async (placeId: string, data: Record<string, unknown>) => {
+    if (tripId) await updatePlace(tripId, placeId, data);
+  };
+
+  const handleDeletePlace = async (placeId: string) => {
+    if (tripId) await deletePlace(tripId, placeId);
   };
 
   if (loading || !currentTrip) {
@@ -139,6 +150,9 @@ export function PlannerPage() {
                 places={dayGroups.get(day) || []}
                 label={`Day ${day}`}
                 onPlaceClick={(p) => setSelectedPlaceId(p.id)}
+                tripId={tripId}
+                onUpdatePlace={handleUpdatePlace}
+                onDeletePlace={handleDeletePlace}
               />
             ))}
             <DayGroup
@@ -146,6 +160,9 @@ export function PlannerPage() {
               places={dayGroups.get(null) || []}
               label="Unassigned"
               onPlaceClick={(p) => setSelectedPlaceId(p.id)}
+              tripId={tripId}
+              onUpdatePlace={handleUpdatePlace}
+              onDeletePlace={handleDeletePlace}
             />
           </DragDropContext>
         </div>

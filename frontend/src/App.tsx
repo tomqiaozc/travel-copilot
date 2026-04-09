@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 import { useAuthStore } from "./stores/auth";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -16,21 +17,24 @@ export default function App() {
   }, [checkAuth]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<TripsPage />} />
-          <Route path="/trips/:tripId" element={<TripDetailPage />} />
-          <Route path="/trips/:tripId/plan" element={<PlannerPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <>
+      <Toaster richColors position="top-right" />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/" element={<TripsPage />} />
+            <Route path="/trips/:tripId" element={<TripDetailPage />} />
+            <Route path="/trips/:tripId/plan" element={<PlannerPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </>
   );
 }

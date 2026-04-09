@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 import { api } from "../api/client";
 import type { Trip, Place, ExtractedPlace, ExportLink, ResolvedPlace } from "../types";
 
@@ -35,20 +36,31 @@ export const useTripStore = create<TripState>((set, get) => ({
       const trips = await api.listTrips();
       set({ trips, loading: false });
     } catch (e) {
+      toast.error("Failed to load trips");
       set({ loading: false });
       throw e;
     }
   },
 
   createTrip: async (data) => {
-    const trip = await api.createTrip(data);
-    set((s) => ({ trips: [trip, ...s.trips] }));
-    return trip;
+    try {
+      const trip = await api.createTrip(data);
+      set((s) => ({ trips: [trip, ...s.trips] }));
+      return trip;
+    } catch (e) {
+      toast.error("Failed to create trip");
+      throw e;
+    }
   },
 
   deleteTrip: async (id) => {
-    await api.deleteTrip(id);
-    set((s) => ({ trips: s.trips.filter((t) => t.id !== id) }));
+    try {
+      await api.deleteTrip(id);
+      set((s) => ({ trips: s.trips.filter((t) => t.id !== id) }));
+    } catch (e) {
+      toast.error("Failed to delete trip");
+      throw e;
+    }
   },
 
   fetchTripDetail: async (id) => {
@@ -60,6 +72,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       ]);
       set({ currentTrip: trip, places, loading: false });
     } catch (e) {
+      toast.error("Failed to load trip details");
       set({ loading: false });
       throw e;
     }
@@ -71,31 +84,51 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   addPlace: async (tripId, data) => {
-    const place = await api.addPlace(tripId, data);
-    set((s) => ({ places: [...s.places, place] }));
+    try {
+      const place = await api.addPlace(tripId, data);
+      set((s) => ({ places: [...s.places, place] }));
+    } catch (e) {
+      toast.error("Failed to add place");
+      throw e;
+    }
   },
 
   updatePlace: async (tripId, placeId, data) => {
-    const updated = await api.updatePlace(tripId, placeId, data);
-    set((s) => ({
-      places: s.places.map((p) => (p.id === placeId ? updated : p)),
-    }));
+    try {
+      const updated = await api.updatePlace(tripId, placeId, data);
+      set((s) => ({
+        places: s.places.map((p) => (p.id === placeId ? updated : p)),
+      }));
+    } catch (e) {
+      toast.error("Failed to update place");
+      throw e;
+    }
   },
 
   deletePlace: async (tripId, placeId) => {
-    await api.deletePlace(tripId, placeId);
-    set((s) => ({ places: s.places.filter((p) => p.id !== placeId) }));
+    try {
+      await api.deletePlace(tripId, placeId);
+      set((s) => ({ places: s.places.filter((p) => p.id !== placeId) }));
+    } catch (e) {
+      toast.error("Failed to delete place");
+      throw e;
+    }
   },
 
   extractPlaces: async (tripId, images) => {
-    const result = await api.extractPlaces(tripId, images);
-    // Auto-set country_code on trip if AI detected one and trip doesn't have it
-    const trip = get().currentTrip;
-    if (result.country_code && trip && !trip.country_code) {
-      await api.updateTrip(tripId, { country_code: result.country_code });
-      set({ currentTrip: { ...trip, country_code: result.country_code } });
+    try {
+      const result = await api.extractPlaces(tripId, images);
+      // Auto-set country_code on trip if AI detected one and trip doesn't have it
+      const trip = get().currentTrip;
+      if (result.country_code && trip && !trip.country_code) {
+        await api.updateTrip(tripId, { country_code: result.country_code });
+        set({ currentTrip: { ...trip, country_code: result.country_code } });
+      }
+      return result.places;
+    } catch (e) {
+      toast.error("Failed to extract places from images");
+      throw e;
     }
-    return result.places;
   },
 
   updateTrip: async (tripId, data) => {
@@ -104,9 +137,14 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   planTrip: async (tripId, userPrompt = "") => {
-    await api.planTrip(tripId, userPrompt);
-    // Refresh places to get updated day assignments
-    await get().fetchPlaces(tripId);
+    try {
+      await api.planTrip(tripId, userPrompt);
+      // Refresh places to get updated day assignments
+      await get().fetchPlaces(tripId);
+    } catch (e) {
+      toast.error("Failed to plan trip");
+      throw e;
+    }
   },
 
   exportGoogleMaps: async (tripId) => {
@@ -115,6 +153,11 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   resolveGoogleLink: async (tripId, url) => {
-    return api.resolveGoogleLink(tripId, url);
+    try {
+      return await api.resolveGoogleLink(tripId, url);
+    } catch (e) {
+      toast.error("Failed to resolve Google Maps link");
+      throw e;
+    }
   },
 }));
