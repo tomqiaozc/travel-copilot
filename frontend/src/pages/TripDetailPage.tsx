@@ -4,6 +4,7 @@ import { useTripStore } from "../stores/trip";
 import { ImageUploader } from "../components/ImageUploader";
 import { PlaceForm } from "../components/PlaceForm";
 import { ExtractionModal } from "../components/ExtractionModal";
+import { ImportModal } from "../components/ImportModal";
 import { SkeletonTripDetail } from "../components/Skeleton";
 import { getGoogleMapsUrl } from "../utils/googleMapsLink";
 import type { ExtractedPlace, Place } from "../types";
@@ -30,7 +31,7 @@ function PlaceCard({
 
   const googleMapsUrl = getGoogleMapsUrl(place);
   const confidence = place.geocode_confidence || (place.latitude != null ? "high" : "none");
-  const TYPES = ["attraction", "restaurant", "hotel", "other"] as const;
+  const TYPES = ["attraction", "restaurant", "hotel", "other", "google_saved"] as const;
 
   const handleSave = async () => {
     const urlChanged = googleMapsUrlInput && googleMapsUrlInput !== (place.google_maps_url || getGoogleMapsUrl(place) || "");
@@ -198,6 +199,8 @@ export function TripDetailPage() {
   const [extracted, setExtracted] = useState<ExtractedPlace[] | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportHelp, setShowImportHelp] = useState(false);
 
   useEffect(() => {
     if (tripId) fetchTripDetail(tripId);
@@ -320,6 +323,40 @@ export function TripDetailPage() {
             <ImageUploader onUpload={handleExtract} loading={extracting} />
           </div>
           <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-700">Import from Google Maps</h3>
+              <button
+                onClick={() => setShowImportHelp(!showImportHelp)}
+                className="text-gray-400 hover:text-blue-500 text-xs flex items-center gap-1"
+                title="How to export from Google Maps"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                How to export?
+              </button>
+            </div>
+            {showImportHelp && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-gray-600 space-y-2">
+                <p className="font-medium text-gray-700">How to export saved places from Google Maps:</p>
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>Go to <a href="https://takeout.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 underline">takeout.google.com</a></li>
+                  <li>Click <span className="font-medium">"Deselect all"</span>, then scroll down and check only <span className="font-medium">"Saved"</span></li>
+                  <li>Click <span className="font-medium">"Next step"</span>, then <span className="font-medium">"Create export"</span></li>
+                  <li>Wait for the export to be ready, then download and unzip</li>
+                  <li>Find the CSV files in the <span className="font-mono bg-gray-100 px-1 rounded">Saved/</span> folder</li>
+                </ol>
+                <p className="text-gray-400 pt-1">Each CSV file represents a list (e.g. "Want to go", "Favorites"). You can upload one or more CSV files below.</p>
+              </div>
+            )}
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors text-sm"
+            >
+              Upload Google Takeout CSV files
+            </button>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm">
             <h3 className="font-medium text-gray-700 mb-3">Add Place</h3>
             <PlaceForm onSubmit={handleAddManual} tripId={tripId!} />
           </div>
@@ -354,6 +391,14 @@ export function TripDetailPage() {
           places={extracted}
           onConfirm={handleConfirmExtracted}
           onClose={() => setExtracted(null)}
+        />
+      )}
+
+      {showImportModal && (
+        <ImportModal
+          tripId={tripId!}
+          onClose={() => setShowImportModal(false)}
+          onComplete={() => setShowImportModal(false)}
         />
       )}
     </div>

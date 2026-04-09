@@ -121,6 +121,7 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
                         <option value="restaurant">restaurant</option>
                         <option value="hotel">hotel</option>
                         <option value="other">other</option>
+                        <option value="google_saved">google_saved</option>
                       </select>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import type { User, Trip, Place, ExtractedPlace, DaySchedule, ExportLink, ResolvedPlace } from "../types";
+import type { User, Trip, Place, ExtractedPlace, DaySchedule, ExportLink, ResolvedPlace, GoogleImportPreviewResponse } from "../types";
 
 const API_BASE = "/api";
 
@@ -129,4 +129,19 @@ export const api = {
     if (!resp.ok) throw new Error(`API error: ${resp.status}`);
     return resp.blob();
   },
+
+  googleImportPreview: (tripId: string, files: File[]) => {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    return request<GoogleImportPreviewResponse>(`/trips/${tripId}/google-import/preview`, {
+      method: "POST",
+      body: form,
+    });
+  },
+
+  googleImportConfirm: (tripId: string, places: { title: string; note: string; url: string }[]) =>
+    request<{ imported: Place[] }>(`/trips/${tripId}/google-import/confirm`, {
+      method: "POST",
+      body: JSON.stringify({ places }),
+    }),
 };

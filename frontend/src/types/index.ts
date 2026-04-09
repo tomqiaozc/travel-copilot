@@ -21,14 +21,14 @@ export interface Place {
   name: string;
   name_local?: string;
   name_en?: string;
-  type: "attraction" | "restaurant" | "hotel" | "other";
+  type: "attraction" | "restaurant" | "hotel" | "other" | "google_saved";
   note: string;
   latitude: number | null;
   longitude: number | null;
   google_place_id?: string;
   google_maps_url?: string;
   geocode_confidence?: "high" | "low" | "none";
-  source: "ai_extracted" | "manual";
+  source: "ai_extracted" | "manual" | "google_import";
   day_number: number | null;
   order_in_day: number;
 }
@@ -66,4 +66,20 @@ export interface ResolvedPlace {
   google_place_id: string;
   formatted_address: string;
   google_maps_url: string;
+}
+
+export interface ImportedPlace {
+  title: string;
+  note: string;
+  url: string;
+  rough_lat: number | null;
+  rough_lon: number | null;
+  list_name: string;
+  nearby: boolean;
+  distance_km: number | null;
+}
+
+export interface GoogleImportPreviewResponse {
+  lists: { name: string; places: ImportedPlace[] }[];
+  trip_center: { lat: number; lon: number } | null;
 }

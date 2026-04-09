@@ -3,7 +3,7 @@ import { useTripStore } from "../stores/trip";
 import { getGoogleMapsUrl } from "../utils/googleMapsLink";
 import type { Place } from "../types";
 
-const TYPES = ["attraction", "restaurant", "hotel", "other"] as const;
+const TYPES = ["attraction", "restaurant", "hotel", "other", "google_saved"] as const;
 
 interface Props {
   place: Place;

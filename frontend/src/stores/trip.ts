@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { toast } from "sonner";
 import { api } from "../api/client";
-import type { Trip, Place, ExtractedPlace, ExportLink, ResolvedPlace } from "../types";
+import type { Trip, Place, ExtractedPlace, ExportLink, ResolvedPlace, GoogleImportPreviewResponse } from "../types";
 
 interface TripState {
   trips: Trip[];
@@ -23,6 +23,8 @@ interface TripState {
   planTrip: (tripId: string, userPrompt?: string) => Promise<void>;
   exportGoogleMaps: (tripId: string) => Promise<ExportLink[]>;
   resolveGoogleLink: (tripId: string, url: string) => Promise<ResolvedPlace>;
+  googleImportPreview: (tripId: string, files: File[]) => Promise<GoogleImportPreviewResponse>;
+  googleImportConfirm: (tripId: string, places: { title: string; note: string; url: string }[]) => Promise<void>;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
@@ -177,6 +179,25 @@ export const useTripStore = create<TripState>((set, get) => ({
       return await api.resolveGoogleLink(tripId, url);
     } catch (e) {
       toast.error("Failed to resolve Google Maps link");
+      throw e;
+    }
+  },
+
+  googleImportPreview: async (tripId, files) => {
+    try {
+      return await api.googleImportPreview(tripId, files);
+    } catch (e) {
+      toast.error("Failed to preview import");
+      throw e;
+    }
+  },
+
+  googleImportConfirm: async (tripId, places) => {
+    try {
+      await api.googleImportConfirm(tripId, places);
+      await get().fetchPlaces(tripId);
+    } catch (e) {
+      toast.error("Failed to import places");
       throw e;
     }
   },

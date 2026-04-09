@@ -25,10 +25,11 @@ Drag-and-drop day-by-day itinerary with color-coded map markers, route lines, an
 
 1. **Create a trip** with destination and dates
 2. **Upload travel guide screenshots** — GPT-4o Vision extracts place names, types, and notes
-3. **Auto-geocode** — multi-strategy parallel geocoding via Google Maps with outlier detection
-4. **Review places** — check confidence indicators, fix any red/orange places by pasting a Google Maps link
-5. **Plan itinerary** — AI groups places by proximity into days, or drag-and-drop manually
-6. **Export** — download KML file to import into Google My Maps
+3. **Import from Google Maps** — upload Google Takeout CSV files to import your saved/favorited places, auto-filtered by trip destination proximity and smart-inserted into the optimal day/position
+4. **Auto-geocode** — multi-strategy parallel geocoding via Google Maps with outlier detection
+5. **Review places** — check confidence indicators, fix any red/orange places by pasting a Google Maps link
+6. **Plan itinerary** — AI groups places by proximity into days, or drag-and-drop manually
+7. **Export** — download KML file to import into Google My Maps
 
 ## Tech Stack
 
@@ -190,6 +191,7 @@ docker-compose down -v               # Stop PostgreSQL and delete all data
 │   └── app/
 │       ├── ai/          # GPT-4o vision extraction & trip planning
 │       ├── auth/        # Google OAuth + JWT + dev-login
+│       ├── google_import/ # Google Maps saved places import (Takeout CSV)
 │       ├── maps/        # Geocoding, distance calc, KML export, place resolver
 │       ├── places/      # Place CRUD
 │       ├── trips/       # Trip CRUD

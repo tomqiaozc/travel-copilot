@@ -6,7 +6,7 @@ interface Props {
   tripId: string;
 }
 
-const TYPES = ["attraction", "restaurant", "hotel", "other"];
+const TYPES = ["attraction", "restaurant", "hotel", "other", "google_saved"];
 
 export function PlaceForm({ onSubmit, tripId }: Props) {
   const { resolveGoogleLink } = useTripStore();

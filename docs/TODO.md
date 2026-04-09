@@ -67,15 +67,17 @@
 - 基于标签做筛选、分组、优先级排序
 - AI 规划时可参考标签权重（如优先安排"必去"标签的地点）
 
-### 16. 从 Google Maps 收藏导入
-- 支持导入用户在 Google Maps 中收藏（Saved/Starred）的地点
-- 导入后根据地点间的相对距离，自动进行日程规划分配
-- 可通过 Google Takeout 导出的 GeoJSON/CSV，或 Google Maps API 读取收藏列表
+### ~~16. 从 Google Maps 收藏导入~~ ✅ 已完成
+- ~~支持导入用户在 Google Maps 中收藏（Saved/Starred）的地点~~
+- ~~导入后根据地点间的相对距离，自动进行日程规划分配~~
+- ~~可通过 Google Takeout 导出的 GeoJSON/CSV，或 Google Maps API 读取收藏列表~~
+- 已实现：上传 Google Takeout CSV 文件（"已保存"目录），通过 S2 Cell ID 从 URL 解码粗略坐标，按距离自动过滤行程范围内地点，用户勾选后精确 geocoding + 智能插入
 
-### 17. 将 Google Maps 收藏智能插入现有行程
-- 用户已有行程后，导入 Google Maps 收藏的地点
-- 根据收藏地点与现有行程中景点的距离，智能地插入到最合适的天和位置
-- 例如：收藏了一家餐厅距离 Day 2 的景点最近，就自动推荐插入 Day 2
+### ~~17. 将 Google Maps 收藏智能插入现有行程~~ ✅ 已完成
+- ~~用户已有行程后，导入 Google Maps 收藏的地点~~
+- ~~根据收藏地点与现有行程中景点的距离，智能地插入到最合适的天和位置~~
+- ~~例如：收藏了一家餐厅距离 Day 2 的景点最近，就自动推荐插入 Day 2~~
+- 已实现：cheapest-insertion 算法选择最近的天 + 最优插入位置（最小化绕路距离），支持按列表筛选、距离过滤、批量导入
 
 ## 部署相关
 

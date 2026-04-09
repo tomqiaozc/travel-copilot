@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class PlaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    type: str = Field(pattern="^(attraction|restaurant|hotel|other)$")
+    type: str = Field(pattern="^(attraction|restaurant|hotel|other|google_saved)$")
     note: str = ""
     name_local: Optional[str] = None
     name_en: Optional[str] = None
