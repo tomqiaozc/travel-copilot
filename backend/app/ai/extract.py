@@ -31,6 +31,7 @@ Return a JSON object (NOT an array). Example:
 
 Rules:
 - Extract EVERY place mentioned, including restaurants, hotels, shops, and landmarks. Do not omit any.
+- Do NOT include duplicate places. If the same place appears multiple times in the images (e.g., in a heading and body), include it only ONCE.
 - If the type is ambiguous, use "other"
 - Do NOT include transportation methods or general area names (like "东京") as places
 - Always try to provide name_local and name_en — these are critical for accurate geocoding

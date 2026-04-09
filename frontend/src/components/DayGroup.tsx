@@ -60,47 +60,82 @@ export function DayGroup({ dayNumber, places, label, startDate, onPlaceClick, tr
       <Droppable droppableId={droppableId}>
         {(provided, snapshot) => (
           <div ref={provided.innerRef} {...provided.droppableProps} className={`space-y-2 min-h-[40px] transition-colors ${snapshot.isDraggingOver ? "bg-blue-100/50 rounded-lg" : ""}`}>
-            {places.map((place, index) => {
-              let dist: number | undefined;
-              if (index > 0) {
-                const prev = places[index - 1];
-                if (
-                  prev.latitude != null && prev.longitude != null &&
-                  place.latitude != null && place.longitude != null
-                ) {
-                  dist = haversineKm(
-                    prev.latitude, prev.longitude,
-                    place.latitude, place.longitude
+            {(() => {
+              // Compute hotel roles and sort accordingly
+              type HotelRole = "check_in" | "check_out" | "mid_stay" | null;
+              const getHotelRole = (p: Place): HotelRole => {
+                if (p.type !== "hotel" || p.check_in_day == null) return null;
+                if (dayNumber === p.check_in_day) return "check_in";
+                if (dayNumber === p.check_out_day) return "check_out";
+                if (dayNumber != null && dayNumber > p.check_in_day && dayNumber < (p.check_out_day ?? p.check_in_day + 1))
+                  return "mid_stay";
+                return null;
+              };
+
+              // Sort: check_out hotels first, then regular + check_in hotels, check_in hotels last
+              const sortedPlaces = [...places].sort((a, b) => {
+                const roleA = getHotelRole(a);
+                const roleB = getHotelRole(b);
+                const orderA = roleA === "check_out" ? -1 : roleA === "check_in" ? 1 : 0;
+                const orderB = roleB === "check_out" ? -1 : roleB === "check_in" ? 1 : 0;
+                if (orderA !== orderB) return orderA - orderB;
+                return a.order_in_day - b.order_in_day;
+              });
+
+              return sortedPlaces.map((place, index) => {
+                const role = getHotelRole(place);
+
+                // Mid-stay hotel: lightweight non-draggable label
+                if (role === "mid_stay") {
+                  return (
+                    <div key={`${place.id}-midstay`} className="text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded px-2 py-1.5 text-center">
+                      🏨 {place.name} · 住宿中
+                    </div>
                   );
                 }
-              }
-              return (
-                <Draggable key={place.id} draggableId={place.id} index={index}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className={snapshot.isDragging ? "opacity-90 scale-[1.02] z-10" : ""}
-                      style={{
-                        ...provided.draggableProps.style,
-                        ...(snapshot.isDragging ? { boxShadow: "0 8px 25px rgba(0,0,0,0.15)" } : {}),
-                      }}
-                    >
-                      <PlaceCard
-                        place={place}
-                        distanceFromPrev={dist}
-                        weekday={weekday}
-                        onPlaceClick={onPlaceClick}
-                        tripId={tripId}
-                        onUpdate={onUpdatePlace ? (data) => onUpdatePlace(place.id, data) : undefined}
-                        onDelete={onDeletePlace ? () => onDeletePlace(place.id) : undefined}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              );
-            })}
+
+                let dist: number | undefined;
+                if (index > 0) {
+                  const prev = sortedPlaces[index - 1];
+                  if (
+                    prev.latitude != null && prev.longitude != null &&
+                    place.latitude != null && place.longitude != null
+                  ) {
+                    dist = haversineKm(
+                      prev.latitude, prev.longitude,
+                      place.latitude, place.longitude
+                    );
+                  }
+                }
+                return (
+                  <Draggable key={place.id} draggableId={place.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={snapshot.isDragging ? "opacity-90 scale-[1.02] z-10" : ""}
+                        style={{
+                          ...provided.draggableProps.style,
+                          ...(snapshot.isDragging ? { boxShadow: "0 8px 25px rgba(0,0,0,0.15)" } : {}),
+                        }}
+                      >
+                        <PlaceCard
+                          place={place}
+                          distanceFromPrev={dist}
+                          weekday={weekday}
+                          hotelRole={role}
+                          onPlaceClick={onPlaceClick}
+                          tripId={tripId}
+                          onUpdate={onUpdatePlace ? (data) => onUpdatePlace(place.id, data) : undefined}
+                          onDelete={onDeletePlace ? () => onDeletePlace(place.id) : undefined}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              });
+            })()}
             {provided.placeholder}
             {places.length === 0 && (
               <p className="text-xs text-gray-400 text-center py-2">

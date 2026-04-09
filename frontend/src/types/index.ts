@@ -38,6 +38,8 @@ export interface Place {
   source: "ai_extracted" | "manual" | "google_import";
   day_number: number | null;
   order_in_day: number;
+  check_in_day?: number | null;
+  check_out_day?: number | null;
 }
 
 export interface ExtractedPlace {

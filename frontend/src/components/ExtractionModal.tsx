@@ -12,6 +12,7 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
     new Set(places.map((_, i) => i))
   );
   const [edits, setEdits] = useState<Map<number, ExtractedPlace>>(new Map());
+  const [submitting, setSubmitting] = useState(false);
 
   const toggle = (index: number) => {
     const next = new Set(selected);
@@ -28,7 +29,9 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
     setEdits(new Map(edits.set(index, { ...current, [field]: value })));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     const result = Array.from(selected).map(
       (i) => edits.get(i) || places[i]
     );
@@ -139,9 +142,10 @@ export function ExtractionModal({ places, onConfirm, onClose }: Props) {
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm hover:bg-blue-700"
+            disabled={submitting}
+            className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Add {selected.size} Places
+            {submitting ? "Adding..." : `Add ${selected.size} Places`}
           </button>
         </div>
       </div>

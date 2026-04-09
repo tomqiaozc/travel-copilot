@@ -10,13 +10,14 @@ interface Props {
   place: Place;
   distanceFromPrev?: number;
   weekday?: number;
+  hotelRole?: "check_in" | "check_out" | "mid_stay" | null;
   onPlaceClick?: (place: Place) => void;
   tripId?: string;
   onUpdate?: (data: Record<string, unknown>) => void;
   onDelete?: () => void;
 }
 
-export function PlaceCard({ place, distanceFromPrev, weekday, onPlaceClick, tripId, onUpdate, onDelete }: Props) {
+export function PlaceCard({ place, distanceFromPrev, weekday, hotelRole, onPlaceClick, tripId, onUpdate, onDelete }: Props) {
   const hasCoords = place.latitude != null && place.longitude != null;
   const editable = !!(onUpdate && onDelete);
 
@@ -157,6 +158,27 @@ export function PlaceCard({ place, distanceFromPrev, weekday, onPlaceClick, trip
               {place.type}
               {place.note && <span className="text-gray-400"> · {place.note}</span>}
             </div>
+            {hotelRole === "check_in" && (
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">入住</span>
+            )}
+            {hotelRole === "check_out" && (
+              <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">退房</span>
+            )}
+            {hotelRole === "check_in" && place.check_in_day != null && onUpdate && (
+              <select
+                value={(place.check_out_day ?? place.check_in_day + 1) - place.check_in_day}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onUpdate({ check_out_day: place.check_in_day! + parseInt(e.target.value) });
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs border rounded px-1 py-0.5 mt-1"
+              >
+                {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                  <option key={n} value={n}>住 {n} 晚</option>
+                ))}
+              </select>
+            )}
             {weekday !== undefined && (() => {
               const status = getOpenStatus(place.opening_hours, weekday);
               if (status === "closed") {

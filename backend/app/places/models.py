@@ -17,6 +17,8 @@ class PlaceCreate(BaseModel):
     geocode_confidence: Optional[str] = None
     day_number: Optional[int] = None
     order_in_day: Optional[int] = None
+    check_in_day: Optional[int] = None
+    check_out_day: Optional[int] = None
     source: Optional[str] = None
 
 
@@ -34,6 +36,8 @@ class PlaceUpdate(BaseModel):
     geocode_confidence: Optional[str] = None
     day_number: Optional[int] = None
     order_in_day: Optional[int] = None
+    check_in_day: Optional[int] = None
+    check_out_day: Optional[int] = None
 
 
 class PlaceReorderItem(BaseModel):
@@ -63,3 +67,5 @@ class PlaceResponse(BaseModel):
     source: str
     day_number: Optional[int] = None
     order_in_day: int
+    check_in_day: Optional[int] = None
+    check_out_day: Optional[int] = None

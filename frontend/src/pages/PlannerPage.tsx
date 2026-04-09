@@ -43,12 +43,20 @@ export function PlannerPage() {
         ) + 1
       : 0;
 
-  // Group places by day
+  // Group places by day, with hotel virtual expansion
   const dayGroups: Map<number | null, Place[]> = new Map();
   places.forEach((p) => {
-    const day = p.day_number;
-    if (!dayGroups.has(day)) dayGroups.set(day, []);
-    dayGroups.get(day)!.push(p);
+    if (p.type === "hotel" && p.check_in_day != null && p.check_out_day != null) {
+      // Hotel appears in each day from check_in to check_out
+      for (let d = p.check_in_day; d <= p.check_out_day; d++) {
+        if (!dayGroups.has(d)) dayGroups.set(d, []);
+        dayGroups.get(d)!.push(p);
+      }
+    } else {
+      const day = p.day_number;
+      if (!dayGroups.has(day)) dayGroups.set(day, []);
+      dayGroups.get(day)!.push(p);
+    }
   });
 
   // Sort within each day
@@ -76,6 +84,19 @@ export function PlannerPage() {
       : [...(dayGroups.get(destDay) || [])];
 
     const [moved] = srcPlaces.splice(srcIndex, 1);
+
+    // Hotel drag: update check_in/check_out instead of reorder
+    if (moved.type === "hotel") {
+      const prevNights = moved.check_in_day != null
+        ? (moved.check_out_day ?? moved.check_in_day + 1) - moved.check_in_day
+        : 1; // default 1 night for first-time assignment
+      await updatePlace(tripId, moved.id, {
+        check_in_day: destDay,
+        check_out_day: destDay != null ? destDay + prevNights : null,
+        day_number: destDay,
+      });
+      return;
+    }
 
     if (srcDay === destDay) {
       srcPlaces.splice(destIndex, 0, moved);
