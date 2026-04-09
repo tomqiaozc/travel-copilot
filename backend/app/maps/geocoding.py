@@ -38,49 +38,65 @@ COUNTRY_MAX_RADIUS_KM: dict[str, float] = {
 DEFAULT_MAX_RADIUS_KM = 2000.0
 
 
-async def _google_geocode(
-    address: str,
-    region: Optional[str] = None,
-    limit: int = 3,
+async def _text_search(
+    query: str,
+    region_code: Optional[str] = None,
+    bias_lat: Optional[float] = None,
+    bias_lon: Optional[float] = None,
+    bias_radius: float = 50000.0,
+    page_size: int = 3,
 ) -> list[dict]:
-    """Google Geocoding API call."""
-    params: dict = {
-        "address": address,
-        "key": settings.google_maps_api_key,
+    """Google Places Text Search API (New) call.
+
+    Returns a list of place results with id, displayName, location, etc.
+    """
+    body: dict = {
+        "textQuery": query,
+        "pageSize": page_size,
     }
-    if region:
-        params["region"] = region.lower()
+    if region_code:
+        body["regionCode"] = region_code.upper()
+    if bias_lat is not None and bias_lon is not None:
+        body["locationBias"] = {
+            "circle": {
+                "center": {"latitude": bias_lat, "longitude": bias_lon},
+                "radius": bias_radius,
+            }
+        }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
-            "https://maps.googleapis.com/maps/api/geocode/json",
-            params=params,
+        resp = await client.post(
+            "https://places.googleapis.com/v1/places:searchText",
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": settings.google_maps_api_key,
+                "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.formattedAddress",
+            },
+            json=body,
         )
         resp.raise_for_status()
         data = resp.json()
 
-    results = data.get("results", [])
-    return results[:limit]
+    return data.get("places", [])
 
 
-def _validate_result(
+def _validate_text_search_result(
     result: dict,
     country_code: Optional[str] = None,
     ref_lat: Optional[float] = None,
     ref_lon: Optional[float] = None,
+    ref_radius_km: float = 80.0,
 ) -> bool:
-    """Check if a geocoding result is geographically reasonable."""
-    loc = result.get("geometry", {}).get("location", {})
-    lat, lng = loc.get("lat"), loc.get("lng")
+    """Check if a Text Search result is geographically reasonable."""
+    loc = result.get("location", {})
+    lat, lng = loc.get("latitude"), loc.get("longitude")
     if lat is None or lng is None:
         return False
 
-    # Check against reference point (already-geocoded place in same trip)
     if ref_lat is not None and ref_lon is not None:
-        if calculate_distance_km(lat, lng, ref_lat, ref_lon) > 80:
+        if calculate_distance_km(lat, lng, ref_lat, ref_lon) > ref_radius_km:
             return False
 
-    # Check against country center
     if country_code and country_code in COUNTRY_CENTERS:
         center_lat, center_lon = COUNTRY_CENTERS[country_code]
         max_r = COUNTRY_MAX_RADIUS_KM.get(country_code, DEFAULT_MAX_RADIUS_KM)
@@ -90,38 +106,22 @@ def _validate_result(
     return True
 
 
-def _pick_best(
+def _pick_best_text_search(
     results: list[dict],
     country_code: Optional[str] = None,
     ref_lat: Optional[float] = None,
     ref_lon: Optional[float] = None,
+    ref_radius_km: float = 80.0,
 ) -> Optional[dict]:
-    """Pick the first valid result from a list."""
+    """Pick the first valid result from Text Search results."""
     for r in results:
-        if _validate_result(r, country_code, ref_lat, ref_lon):
-            loc = r["geometry"]["location"]
+        if _validate_text_search_result(r, country_code, ref_lat, ref_lon, ref_radius_km):
+            loc = r["location"]
             return {
-                "latitude": loc["lat"],
-                "longitude": loc["lng"],
-                "google_place_id": r.get("place_id"),
+                "latitude": loc["latitude"],
+                "longitude": loc["longitude"],
+                "google_place_id": r.get("id"),
             }
-    return None
-
-
-async def _search_strategy(
-    query: str,
-    country_set: Optional[str],
-    country_code: Optional[str],
-    ref_lat: Optional[float],
-    ref_lon: Optional[float],
-) -> Optional[dict]:
-    """Run one search strategy and return validated result or None."""
-    try:
-        results = await _google_geocode(address=query, region=country_set)
-        if results:
-            return _pick_best(results, country_code, ref_lat, ref_lon)
-    except Exception:
-        logger.warning("Search failed for query: %s", query, exc_info=True)
     return None
 
 
@@ -134,45 +134,62 @@ async def geocode_place(
     ref_lat: Optional[float] = None,
     ref_lon: Optional[float] = None,
 ) -> dict:
-    """Geocode a place using parallel multi-strategy search.
+    """Geocode a place using Google Places Text Search API.
 
-    Fires up to 3 strategies concurrently (local name, English name, Chinese name),
-    prioritizing local language > English > Chinese for Google Geocoding matching.
+    Tries up to 3 query strategies sequentially (local name, English, Chinese),
+    each with city context. Stops at first successful match.
     """
-    # Build strategies: (query, country_set) — ordered by priority
-    # For each name variant, try with and without city context (location_hint)
-    strategies: list[tuple[str, Optional[str]]] = []
+    # Location bias: use ref point if available (cluster center from second pass).
+    # For first pass (no ref), rely on regionCode only — country-level bias
+    # would exceed the 50km max radius for locationBias.circle.
+    bias_lat, bias_lon, bias_radius = None, None, 50000.0
+    if ref_lat is not None and ref_lon is not None:
+        bias_lat, bias_lon = ref_lat, ref_lon
+        bias_radius = 50000.0  # 50km when we have a cluster
+
+    ref_radius_km = 80.0 if ref_lat is not None else DEFAULT_MAX_RADIUS_KM
+
+    # Build query strategies ordered by priority
+    strategies: list[str] = []
 
     if name_local:
         if location_hint:
-            strategies.append((f"{name_local}, {location_hint}", country_code))
-        strategies.append((name_local, country_code))
+            strategies.append(f"{name_local}, {location_hint}")
+        strategies.append(name_local)
     if name_en:
         if location_hint:
-            strategies.append((f"{name_en}, {location_hint}", country_code))
-        strategies.append((name_en, country_code))
-    # Chinese name with city context
-    if location_hint:
-        strategies.append((f"{name}, {location_hint}", country_code))
-    # Chinese name with country only
-    if country_code:
-        strategies.append((name, country_code))
-    # Last resort: name alone
+            strategies.append(f"{name_en}, {location_hint}")
+        strategies.append(name_en)
+    if name != name_local and name != name_en:
+        if location_hint:
+            strategies.append(f"{name}, {location_hint}")
+        strategies.append(name)
+
     if not strategies:
-        strategies.append((name, None))
+        strategies.append(name)
 
-    # Fire all strategies in parallel
-    tasks = [
-        _search_strategy(q, cs, country_code, ref_lat, ref_lon)
-        for q, cs in strategies
-    ]
-    results = await asyncio.gather(*tasks)
-
-    # Pick first valid result in priority order
-    for result in results:
-        if result:
-            logger.info("Geocoded '%s': (%s, %s)", name, result["latitude"], result["longitude"])
-            return result
+    # Try strategies sequentially — Text Search is accurate enough that
+    # the first strategy usually succeeds, avoiding unnecessary API calls
+    for query in strategies:
+        try:
+            results = await _text_search(
+                query=query,
+                region_code=country_code,
+                bias_lat=bias_lat,
+                bias_lon=bias_lon,
+                bias_radius=bias_radius,
+            )
+            if results:
+                best = _pick_best_text_search(
+                    results, country_code, ref_lat, ref_lon, ref_radius_km,
+                )
+                if best:
+                    logger.info("Geocoded '%s' via query '%s': (%s, %s) id=%s",
+                                name, query, best["latitude"], best["longitude"],
+                                best["google_place_id"])
+                    return best
+        except Exception:
+            logger.warning("Text search failed for query: %s", query, exc_info=True)
 
     logger.warning("All strategies failed for '%s'", name)
     return {"latitude": None, "longitude": None, "google_place_id": None, "geocode_confidence": "none"}
@@ -255,13 +272,12 @@ async def geocode_places(
 ) -> list[dict]:
     """Geocode multiple places concurrently with cluster-based validation.
 
-    1. First pass: geocode all places concurrently (country-level constraint only).
+    1. First pass: geocode all places concurrently (country-level bias).
     2. Compute median cluster center from results.
     3. Second pass: re-geocode outliers (>50km from cluster) AND failed places,
        using the cluster center as a geographic bias.
     """
     # First pass: geocode all places concurrently
-    # Each place can have its own city hint; fall back to the shared location_hint
     tasks = [
         geocode_place(
             name=p["name"],

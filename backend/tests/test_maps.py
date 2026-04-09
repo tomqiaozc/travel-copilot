@@ -10,14 +10,14 @@ from app.maps.distance import calculate_distance_km
 async def test_geocode_place():
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "results": [
+        "places": [
             {
-                "geometry": {"location": {"lat": 35.7148, "lng": 139.7967}},
-                "formatted_address": "Senso-ji, Tokyo",
-                "place_id": "ChIJ82XhAEuMGGARqBqkPGiMaMA",
+                "id": "ChIJ82XhAEuMGGARqBqkPGiMaMA",
+                "displayName": {"text": "Senso-ji", "languageCode": "en"},
+                "location": {"latitude": 35.7148, "longitude": 139.7967},
+                "formattedAddress": "Senso-ji, Tokyo",
             }
         ],
-        "status": "OK",
     }
     mock_response.raise_for_status = MagicMock()
 
@@ -25,7 +25,7 @@ async def test_geocode_place():
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get.return_value = mock_response
+        mock_client.post.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
         result = await geocode_place("浅草寺")

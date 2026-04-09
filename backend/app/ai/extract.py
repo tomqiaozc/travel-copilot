@@ -5,7 +5,9 @@ from app.ai.github_models import vision_completion
 
 EXTRACT_PROMPT = """You are analyzing travel guide screenshots (likely from Chinese social media like Xiaohongshu/小红书).
 
-Extract ALL places mentioned in these images. For each place, identify:
+Extract ALL places mentioned in these images. You MUST extract every single place — do not skip any. Count carefully.
+
+For each place, identify:
 - name: The place name (keep original language, e.g., Chinese or Japanese)
 - name_local: The place name in the LOCAL language of the destination (e.g., Japanese for Japan, Korean for Korea). If the original name is already in the local language, repeat it. If unsure, leave empty string.
 - name_en: The place name in ENGLISH. Translate or transliterate the name. This is critical for geocoding accuracy.
@@ -28,7 +30,7 @@ Return a JSON object (NOT an array). Example:
 }
 
 Rules:
-- Extract every place mentioned, including restaurants, hotels, shops, and landmarks
+- Extract EVERY place mentioned, including restaurants, hotels, shops, and landmarks. Do not omit any.
 - If the type is ambiguous, use "other"
 - Do NOT include transportation methods or general area names (like "东京") as places
 - Always try to provide name_local and name_en — these are critical for accurate geocoding
@@ -50,7 +52,7 @@ async def extract_places_from_images(image_data_list: list) -> dict:
 
     Returns {"places": [...], "country_code": "JP" or None, "cities": [...]}.
     """
-    response = await vision_completion(EXTRACT_PROMPT, image_data_list)
+    response = await vision_completion(EXTRACT_PROMPT, image_data_list, temperature=0)
     result = _parse_json_response(response)
 
     # Handle legacy bare-array responses from AI

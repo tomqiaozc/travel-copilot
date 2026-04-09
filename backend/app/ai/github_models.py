@@ -7,7 +7,7 @@ import httpx
 from app.config import settings
 
 
-async def chat_completion(messages: list, max_tokens: int = 4096) -> str:
+async def chat_completion(messages: list, max_tokens: int = 4096, temperature: float = 1.0) -> str:
     """Send a chat completion request to GitHub Models API."""
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
@@ -20,13 +20,14 @@ async def chat_completion(messages: list, max_tokens: int = 4096) -> str:
                 "model": settings.ai_model,
                 "messages": messages,
                 "max_tokens": max_tokens,
+                "temperature": temperature,
             },
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
 
 
-async def vision_completion(prompt: str, image_data_list: list, max_tokens: int = 4096) -> str:
+async def vision_completion(prompt: str, image_data_list: list, max_tokens: int = 4096, temperature: float = 1.0) -> str:
     """Send images + prompt to GitHub Models API (Vision)."""
     content = [{"type": "text", "text": prompt}]
     for img_data in image_data_list:
@@ -37,4 +38,4 @@ async def vision_completion(prompt: str, image_data_list: list, max_tokens: int 
         })
 
     messages = [{"role": "user", "content": content}]
-    return await chat_completion(messages, max_tokens=max_tokens)
+    return await chat_completion(messages, max_tokens=max_tokens, temperature=temperature)
