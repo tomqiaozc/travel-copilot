@@ -6,6 +6,7 @@ import { useTripStore } from "../stores/trip";
 import { DayGroup } from "../components/DayGroup";
 import { TripMap } from "../components/TripMap";
 import { PlanPromptModal } from "../components/PlanPromptModal";
+import { SkeletonPlannerPage } from "../components/Skeleton";
 import { api } from "../api/client";
 import type { Place } from "../types";
 
@@ -20,6 +21,7 @@ export function PlannerPage() {
     fetchTripDetail,
     updatePlace,
     deletePlace,
+    reorderPlaces,
     planTrip,
   } = useTripStore();
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -56,16 +58,48 @@ export function PlannerPage() {
   const handleDragEnd = async (result: DropResult) => {
     if (!result.destination || !tripId) return;
 
-    const placeId = result.draggableId;
+    const srcDay = result.source.droppableId === "unassigned"
+      ? null
+      : parseInt(result.source.droppableId.replace("day-", ""));
     const destDay = result.destination.droppableId === "unassigned"
       ? null
       : parseInt(result.destination.droppableId.replace("day-", ""));
+    const srcIndex = result.source.index;
     const destIndex = result.destination.index;
 
-    await updatePlace(tripId, placeId, {
-      day_number: destDay,
-      order_in_day: destIndex + 1,
+    if (srcDay === destDay && srcIndex === destIndex) return;
+
+    const srcPlaces = [...(dayGroups.get(srcDay) || [])];
+    const destPlaces = srcDay === destDay
+      ? srcPlaces
+      : [...(dayGroups.get(destDay) || [])];
+
+    const [moved] = srcPlaces.splice(srcIndex, 1);
+
+    if (srcDay === destDay) {
+      srcPlaces.splice(destIndex, 0, moved);
+    } else {
+      destPlaces.splice(destIndex, 0, moved);
+    }
+
+    const placements: {
+      place_id: string;
+      day_number: number | null;
+      order_in_day: number;
+    }[] = [];
+
+    if (srcDay !== destDay) {
+      srcPlaces.forEach((p, i) => {
+        placements.push({ place_id: p.id, day_number: srcDay, order_in_day: i + 1 });
+      });
+    }
+
+    const targetPlaces = srcDay === destDay ? srcPlaces : destPlaces;
+    targetPlaces.forEach((p, i) => {
+      placements.push({ place_id: p.id, day_number: destDay, order_in_day: i + 1 });
     });
+
+    await reorderPlaces(tripId, placements);
   };
 
   const handlePlan = async (prompt: string) => {
@@ -109,7 +143,7 @@ export function PlannerPage() {
   };
 
   if (loading || !currentTrip) {
-    return <div className="text-center py-20 text-gray-500">Loading...</div>;
+    return <SkeletonPlannerPage />;
   }
 
   return (

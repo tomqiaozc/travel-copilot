@@ -59,3 +59,18 @@ def delete_place(place_id: str, trip_id: str) -> bool:
         return True
     except CosmosResourceNotFoundError:
         return False
+
+
+def reorder_places(trip_id: str, placements: list[dict]) -> list[dict]:
+    container = db.get_container("places")
+    updated = []
+    for p in placements:
+        try:
+            existing = container.read_item(item=p["place_id"], partition_key=trip_id)
+            existing["day_number"] = p["day_number"]
+            existing["order_in_day"] = p["order_in_day"]
+            container.replace_item(item=p["place_id"], body=existing, partition_key=trip_id)
+            updated.append(existing)
+        except CosmosResourceNotFoundError:
+            continue
+    return updated

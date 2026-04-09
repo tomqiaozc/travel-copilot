@@ -17,6 +17,7 @@ interface TripState {
   addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string }) => Promise<void>;
   updatePlace: (tripId: string, placeId: string, data: Record<string, unknown>) => Promise<void>;
   deletePlace: (tripId: string, placeId: string) => Promise<void>;
+  reorderPlaces: (tripId: string, placements: { place_id: string; day_number: number | null; order_in_day: number }[]) => Promise<void>;
   extractPlaces: (tripId: string, images: File[]) => Promise<ExtractedPlace[]>;
   updateTrip: (tripId: string, data: Record<string, unknown>) => Promise<void>;
   planTrip: (tripId: string, userPrompt?: string) => Promise<void>;
@@ -112,6 +113,25 @@ export const useTripStore = create<TripState>((set, get) => ({
     } catch (e) {
       toast.error("Failed to delete place");
       throw e;
+    }
+  },
+
+  reorderPlaces: async (tripId, placements) => {
+    const prevPlaces = get().places;
+    const placementMap = new Map(placements.map(p => [p.place_id, p]));
+    set({
+      places: prevPlaces.map(p => {
+        const placement = placementMap.get(p.id);
+        return placement
+          ? { ...p, day_number: placement.day_number, order_in_day: placement.order_in_day }
+          : p;
+      }),
+    });
+    try {
+      await api.reorderPlaces(tripId, placements);
+    } catch {
+      set({ places: prevPlaces });
+      toast.error("Failed to reorder places");
     }
   },
 

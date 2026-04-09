@@ -38,7 +38,7 @@ Drag-and-drop day-by-day itinerary with color-coded map markers, route lines, an
 | Backend | Python 3.9+, FastAPI, Pydantic |
 | AI | GPT-4o Vision via GitHub Models API |
 | Maps | Google Maps JavaScript API, Google Geocoding API |
-| Database | Azure Cosmos DB (production), in-memory store (local dev) |
+| Database | Azure Cosmos DB (production), PostgreSQL or in-memory (local dev) |
 | Storage | Azure Blob Storage (production), local filesystem (local dev) |
 | Auth | Google OAuth 2.0 + JWT (production), dev-login bypass (local dev) |
 
@@ -48,6 +48,7 @@ Drag-and-drop day-by-day itinerary with color-coded map markers, route lines, an
 
 - Python 3.9+
 - Node.js 18+
+- Docker (for local PostgreSQL, optional)
 - API keys (see below)
 
 ### 1. Get API Keys
@@ -71,7 +72,31 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
+#### Option A: PostgreSQL (recommended — data persists across restarts)
+
+```bash
+# Start PostgreSQL via Docker (from project root)
+docker-compose up -d
+
+# Create .env file
+cat > .env << 'EOF'
+GITHUB_TOKEN=your_github_token_here
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+AI_MODEL=gpt-4o
+DATABASE_URL=postgresql://travel:travel@localhost:5432/travel_copilot
+EOF
+
+# Start the server
+uvicorn app.main:app --reload
+```
+
+Tables are auto-created on first request. Data survives backend restarts. To reset, run `docker-compose down -v`.
+
+#### Option B: In-memory (no Docker needed — data resets on restart)
+
+```bash
 # Create .env file
 cat > .env << 'EOF'
 GITHUB_TOKEN=your_github_token_here
@@ -84,7 +109,7 @@ EOF
 uvicorn app.main:app --reload
 ```
 
-The backend runs at `http://localhost:8000`. With `USE_LOCAL_DB=true`, no Azure Cosmos DB or Blob Storage is needed — data is stored in memory (resets on restart).
+The backend runs at `http://localhost:8000`.
 
 ### 3. Frontend Setup
 
@@ -119,7 +144,8 @@ With `USE_LOCAL_DB=true`, a **dev-login** endpoint is automatically available. T
 | `GITHUB_TOKEN` | Yes | — | GitHub Models API token for GPT-4o |
 | `GOOGLE_MAPS_API_KEY` | Yes | — | Google Maps Platform API key |
 | `AI_MODEL` | No | `gpt-4o` | AI model name |
-| `USE_LOCAL_DB` | No | `false` | `true` = in-memory DB, no Azure needed |
+| `USE_LOCAL_DB` | No | `false` | `true` = in-memory DB, no Azure/Docker needed |
+| `DATABASE_URL` | No | — | PostgreSQL connection string (e.g. `postgresql://travel:travel@localhost:5432/travel_copilot`). Takes priority over `USE_LOCAL_DB` |
 | `COSMOS_ENDPOINT` | Prod | — | Azure Cosmos DB endpoint |
 | `COSMOS_KEY` | Prod | — | Azure Cosmos DB key |
 | `COSMOS_DATABASE` | No | `travel-copilot` | Cosmos database name |
@@ -150,6 +176,11 @@ cd frontend
 npm run dev       # Vite dev server (port 5173)
 npm run build     # Type-check + production build
 npm run lint      # ESLint
+
+# Database (from project root)
+docker-compose up -d                 # Start PostgreSQL
+docker-compose down                  # Stop PostgreSQL (data preserved)
+docker-compose down -v               # Stop PostgreSQL and delete all data
 ```
 
 ## Project Structure

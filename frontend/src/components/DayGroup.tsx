@@ -55,8 +55,8 @@ export function DayGroup({ dayNumber, places, label, onPlaceClick, tripId, onUpd
     <div className={`border-l-4 ${borderColor} ${bgColor} rounded-lg p-3 mb-4`}>
       <div className="font-bold text-sm text-gray-700 mb-2">{label}</div>
       <Droppable droppableId={droppableId}>
-        {(provided) => (
-          <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[40px]">
+        {(provided, snapshot) => (
+          <div ref={provided.innerRef} {...provided.droppableProps} className={`space-y-2 min-h-[40px] transition-colors ${snapshot.isDraggingOver ? "bg-blue-100/50 rounded-lg" : ""}`}>
             {places.map((place, index) => {
               let dist: number | undefined;
               if (index > 0) {
@@ -73,11 +73,16 @@ export function DayGroup({ dayNumber, places, label, onPlaceClick, tripId, onUpd
               }
               return (
                 <Draggable key={place.id} draggableId={place.id} index={index}>
-                  {(provided) => (
+                  {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
+                      className={snapshot.isDragging ? "opacity-90 scale-[1.02] z-10" : ""}
+                      style={{
+                        ...provided.draggableProps.style,
+                        ...(snapshot.isDragging ? { boxShadow: "0 8px 25px rgba(0,0,0,0.15)" } : {}),
+                      }}
                     >
                       <PlaceCard
                         place={place}

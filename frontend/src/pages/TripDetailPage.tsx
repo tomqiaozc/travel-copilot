@@ -4,6 +4,7 @@ import { useTripStore } from "../stores/trip";
 import { ImageUploader } from "../components/ImageUploader";
 import { PlaceForm } from "../components/PlaceForm";
 import { ExtractionModal } from "../components/ExtractionModal";
+import { SkeletonTripDetail } from "../components/Skeleton";
 import { getGoogleMapsUrl } from "../utils/googleMapsLink";
 import type { ExtractedPlace, Place } from "../types";
 
@@ -247,7 +248,7 @@ export function TripDetailPage() {
   };
 
   if (loading || !currentTrip) {
-    return <div className="text-center py-20 text-gray-500">Loading...</div>;
+    return <SkeletonTripDetail />;
   }
 
   return (

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from app.config import settings
 
-# Use in-memory DB when use_local_db is set (no Cosmos DB needed)
-if settings.use_local_db:
+# Use PostgreSQL when database_url is set, in-memory DB for local dev, otherwise Cosmos DB
+if settings.database_url:
+    from app.db_postgres import get_container, get_database, get_cosmos_client, reset_clients
+elif settings.use_local_db:
     from app.db_memory import get_container, get_database, get_cosmos_client, reset_clients
 else:
     from azure.cosmos import CosmosClient, PartitionKey

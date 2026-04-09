@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.auth.dependencies import get_current_user
-from app.places.models import PlaceCreate, PlaceUpdate
+from app.places.models import PlaceCreate, PlaceUpdate, ReorderRequest
 from app.places import repository
 from app.trips.repository import get_trip
 from app.maps.place_resolver import resolve_google_maps_link
@@ -33,6 +33,15 @@ async def create_place(
 ):
     _verify_trip_access(trip_id, user)
     return repository.create_place(trip_id, body.model_dump(), source=body.source or "manual")
+
+
+@router.put("/reorder")
+async def reorder_places_endpoint(
+    trip_id: str, body: ReorderRequest, user: dict = Depends(get_current_user)
+):
+    _verify_trip_access(trip_id, user)
+    updated = repository.reorder_places(trip_id, [p.model_dump() for p in body.placements])
+    return updated
 
 
 @router.put("/{place_id}")

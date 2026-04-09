@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { StepProgress } from "./StepProgress";
 
 interface Props {
   onSubmit: (prompt: string) => void;
@@ -6,6 +7,12 @@ interface Props {
   loading: boolean;
   error?: string | null;
 }
+
+const PLAN_STEPS = [
+  { label: "Analyzing places...", duration: 2000 },
+  { label: "Optimizing routes...", duration: 4000 },
+  { label: "Generating itinerary...", duration: 5000 },
+];
 
 export function PlanPromptModal({ onSubmit, onClose, loading, error }: Props) {
   const [prompt, setPrompt] = useState("");
@@ -38,6 +45,11 @@ export function PlanPromptModal({ onSubmit, onClose, loading, error }: Props) {
             {loading ? "Planning..." : "Plan Itinerary"}
           </button>
         </div>
+        {loading && (
+          <div className="mt-3 bg-blue-50 rounded-lg p-3">
+            <StepProgress steps={PLAN_STEPS} active={loading} />
+          </div>
+        )}
         {error && (
           <p className="mt-3 text-sm text-red-600">{error}</p>
         )}

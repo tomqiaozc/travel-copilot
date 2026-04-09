@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { StepProgress } from "./StepProgress";
 
 interface Props {
   onUpload: (files: File[]) => void;
   loading: boolean;
 }
+
+const EXTRACT_STEPS = [
+  { label: "Uploading images...", duration: 2000 },
+  { label: "Analyzing with AI...", duration: 5000 },
+  { label: "Geocoding places...", duration: 4000 },
+];
 
 export function ImageUploader({ onUpload, loading }: Props) {
   const [files, setFiles] = useState<File[]>([]);
@@ -97,8 +104,13 @@ export function ImageUploader({ onUpload, loading }: Props) {
             disabled={loading}
             className="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {loading ? "Extracting..." : "AI Extract Places"}
+            {loading ? "Processing..." : "AI Extract Places"}
           </button>
+          {loading && (
+            <div className="mt-3 bg-blue-50 rounded-lg p-3">
+              <StepProgress steps={EXTRACT_STEPS} active={loading} />
+            </div>
+          )}
         </div>
       )}
     </div>

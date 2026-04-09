@@ -84,6 +84,12 @@ export const api = {
   deletePlace: (tripId: string, placeId: string) =>
     request<void>(`/trips/${tripId}/places/${placeId}`, { method: "DELETE" }),
 
+  reorderPlaces: (tripId: string, placements: { place_id: string; day_number: number | null; order_in_day: number }[]) =>
+    request<Place[]>(`/trips/${tripId}/places/reorder`, {
+      method: "PUT",
+      body: JSON.stringify({ placements }),
+    }),
+
   // AI
   extractPlaces: (tripId: string, images: File[]) => {
     const form = new FormData();

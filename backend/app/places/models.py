@@ -34,6 +34,16 @@ class PlaceUpdate(BaseModel):
     order_in_day: Optional[int] = None
 
 
+class PlaceReorderItem(BaseModel):
+    place_id: str
+    day_number: Optional[int] = None
+    order_in_day: int
+
+
+class ReorderRequest(BaseModel):
+    placements: list[PlaceReorderItem]
+
+
 class PlaceResponse(BaseModel):
     id: str
     trip_id: str

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTripStore } from "../stores/trip";
 import { TripCard } from "../components/TripCard";
+import { SkeletonTripsPage } from "../components/Skeleton";
 
 export function TripsPage() {
   const { trips, loading, fetchTrips, createTrip, deleteTrip } = useTripStore();
@@ -36,7 +37,7 @@ export function TripsPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-20 text-gray-500">Loading...</div>;
+    return <SkeletonTripsPage />;
   }
 
   return (

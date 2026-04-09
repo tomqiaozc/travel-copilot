@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     # Local dev mode
     use_local_db: bool = False
+    database_url: str = ""
 
     model_config = {"env_file": ".env"}
 
