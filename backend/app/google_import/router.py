@@ -8,6 +8,7 @@ from app.auth.dependencies import get_current_user
 from app.google_import.parser import parse_csv, compute_trip_center, filter_nearby
 from app.google_import.smart_insert import assign_to_days
 from app.maps.geocoding import geocode_places
+from app.maps.opening_hours import fetch_opening_hours_batch
 from app.places import repository as places_repo
 from app.places.models import PlaceResponse
 from app.trips.repository import get_trip
@@ -115,6 +116,11 @@ async def confirm(
 
     # Smart insert: assign day_number and order_in_day
     assign_to_days(new_places, existing)
+
+    # Fetch opening hours for places with google_place_id
+    hours_results = await fetch_opening_hours_batch(new_places)
+    for np, hours in zip(new_places, hours_results):
+        np["opening_hours"] = hours
 
     # Create places in database
     imported = []

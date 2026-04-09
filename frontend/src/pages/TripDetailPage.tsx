@@ -49,6 +49,7 @@ function PlaceCard({
           longitude: resolved.longitude,
           google_place_id: resolved.google_place_id,
           geocode_confidence: "high",
+          opening_hours: resolved.opening_hours,
         });
         setEditing(false);
       } catch {
@@ -190,6 +191,7 @@ export function TripDetailPage() {
     loading,
     fetchTripDetail,
     addPlace,
+    addPlacesBatch,
     updatePlace,
     updateTrip,
     deletePlace,
@@ -219,22 +221,21 @@ export function TripDetailPage() {
 
   const handleConfirmExtracted = async (selected: ExtractedPlace[]) => {
     if (!tripId) return;
-    for (const place of selected) {
-      await addPlace(tripId, {
-        name: place.name,
-        type: place.type,
-        note: "",
-        name_local: place.name_local || "",
-        name_en: place.name_en || "",
-        latitude: place.latitude,
-        longitude: place.longitude,
-        google_place_id: place.google_place_id,
-        geocode_confidence: place.geocode_confidence,
-        day_number: place.day_number,
-        order_in_day: place.order_in_day,
-        source: "ai_extracted",
-      });
-    }
+    await addPlacesBatch(tripId, selected.map((place) => ({
+      name: place.name,
+      type: place.type,
+      note: "",
+      name_local: place.name_local || "",
+      name_en: place.name_en || "",
+      latitude: place.latitude,
+      longitude: place.longitude,
+      google_place_id: place.google_place_id,
+      geocode_confidence: place.geocode_confidence,
+      day_number: place.day_number,
+      order_in_day: place.order_in_day,
+      source: "ai_extracted",
+      opening_hours: place.opening_hours,
+    })));
     setExtracted(null);
   };
 

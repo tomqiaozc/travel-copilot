@@ -69,8 +69,14 @@ export const api = {
   // Places
   listPlaces: (tripId: string) => request<Place[]>(`/trips/${tripId}/places`),
 
-  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string }) =>
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string; opening_hours?: { periods: { day: number; open: string; close: string }[] } | null }) =>
     request<Place>(`/trips/${tripId}/places`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  addPlacesBatch: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string; opening_hours?: { periods: { day: number; open: string; close: string }[] } | null }[]) =>
+    request<Place[]>(`/trips/${tripId}/places/batch`, {
       method: "POST",
       body: JSON.stringify(data),
     }),

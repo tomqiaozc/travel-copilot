@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTripStore } from "../stores/trip";
 import { getGoogleMapsUrl } from "../utils/googleMapsLink";
+import { getOpenStatus, formatHoursForDay } from "../utils/openingHours";
 import type { Place } from "../types";
 
 const TYPES = ["attraction", "restaurant", "hotel", "other", "google_saved"] as const;
@@ -8,13 +9,14 @@ const TYPES = ["attraction", "restaurant", "hotel", "other", "google_saved"] as 
 interface Props {
   place: Place;
   distanceFromPrev?: number;
+  weekday?: number;
   onPlaceClick?: (place: Place) => void;
   tripId?: string;
   onUpdate?: (data: Record<string, unknown>) => void;
   onDelete?: () => void;
 }
 
-export function PlaceCard({ place, distanceFromPrev, onPlaceClick, tripId, onUpdate, onDelete }: Props) {
+export function PlaceCard({ place, distanceFromPrev, weekday, onPlaceClick, tripId, onUpdate, onDelete }: Props) {
   const hasCoords = place.latitude != null && place.longitude != null;
   const editable = !!(onUpdate && onDelete);
 
@@ -55,6 +57,7 @@ export function PlaceCard({ place, distanceFromPrev, onPlaceClick, tripId, onUpd
           longitude: resolved.longitude,
           google_place_id: resolved.google_place_id,
           geocode_confidence: "high",
+          opening_hours: resolved.opening_hours,
         });
         setEditing(false);
       } catch {
@@ -154,6 +157,26 @@ export function PlaceCard({ place, distanceFromPrev, onPlaceClick, tripId, onUpd
               {place.type}
               {place.note && <span className="text-gray-400"> · {place.note}</span>}
             </div>
+            {weekday !== undefined && (() => {
+              const status = getOpenStatus(place.opening_hours, weekday);
+              if (status === "closed") {
+                return (
+                  <div className="mt-1">
+                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
+                      Closed today
+                    </span>
+                  </div>
+                );
+              }
+              if (status === "open") {
+                return (
+                  <div className="text-[10px] text-gray-400 mt-1">
+                    {formatHoursForDay(place.opening_hours, weekday)}
+                  </div>
+                );
+              }
+              return null;
+            })()}
             {googleMapsUrl && (
               <a
                 href={googleMapsUrl}

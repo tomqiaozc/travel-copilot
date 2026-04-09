@@ -14,7 +14,8 @@ interface TripState {
   deleteTrip: (id: string) => Promise<void>;
   fetchTripDetail: (id: string) => Promise<void>;
   fetchPlaces: (tripId: string) => Promise<void>;
-  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string }) => Promise<void>;
+  addPlace: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string; opening_hours?: { periods: { day: number; open: string; close: string }[] } | null }) => Promise<void>;
+  addPlacesBatch: (tripId: string, data: { name: string; type: string; note: string; name_local?: string; name_en?: string; latitude?: number | null; longitude?: number | null; google_place_id?: string; google_maps_url?: string; geocode_confidence?: string; day_number?: number | null; order_in_day?: number | null; source?: string; opening_hours?: { periods: { day: number; open: string; close: string }[] } | null }[]) => Promise<void>;
   updatePlace: (tripId: string, placeId: string, data: Record<string, unknown>) => Promise<void>;
   deletePlace: (tripId: string, placeId: string) => Promise<void>;
   reorderPlaces: (tripId: string, placements: { place_id: string; day_number: number | null; order_in_day: number }[]) => Promise<void>;
@@ -92,6 +93,16 @@ export const useTripStore = create<TripState>((set, get) => ({
       set((s) => ({ places: [...s.places, place] }));
     } catch (e) {
       toast.error("Failed to add place");
+      throw e;
+    }
+  },
+
+  addPlacesBatch: async (tripId, data) => {
+    try {
+      const places = await api.addPlacesBatch(tripId, data);
+      set((s) => ({ places: [...s.places, ...places] }));
+    } catch (e) {
+      toast.error("Failed to add places");
       throw e;
     }
   },

@@ -35,6 +35,7 @@ def create_place(trip_id: str, data: dict, source: str = "manual") -> dict:
         "source": data.get("source") or source,
         "day_number": data.get("day_number"),
         "order_in_day": data.get("order_in_day", 0),
+        "opening_hours": data.get("opening_hours"),
     }
     container.create_item(body=doc)
     return doc

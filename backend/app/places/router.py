@@ -6,6 +6,7 @@ from app.places.models import PlaceCreate, PlaceUpdate, ReorderRequest
 from app.places import repository
 from app.trips.repository import get_trip
 from app.maps.place_resolver import resolve_google_maps_link
+from app.maps.opening_hours import fetch_opening_hours_batch
 
 router = APIRouter(prefix="/api/trips/{trip_id}/places", tags=["places"])
 
@@ -32,7 +33,34 @@ async def create_place(
     trip_id: str, body: PlaceCreate, user: dict = Depends(get_current_user)
 ):
     _verify_trip_access(trip_id, user)
-    return repository.create_place(trip_id, body.model_dump(), source=body.source or "manual")
+    doc = repository.create_place(trip_id, body.model_dump(), source=body.source or "manual")
+    if doc.get("google_place_id") and not doc.get("opening_hours"):
+        hours = await fetch_opening_hours_batch([doc])
+        if hours[0]:
+            repository.update_place(doc["id"], trip_id, {"opening_hours": hours[0]})
+            doc["opening_hours"] = hours[0]
+    return doc
+
+
+@router.post("/batch", status_code=status.HTTP_201_CREATED)
+async def create_places_batch(
+    trip_id: str, body: list[PlaceCreate], user: dict = Depends(get_current_user)
+):
+    _verify_trip_access(trip_id, user)
+    docs = []
+    need_hours = []
+    for item in body:
+        doc = repository.create_place(trip_id, item.model_dump(), source=item.source or "manual")
+        docs.append(doc)
+        if doc.get("google_place_id") and not doc.get("opening_hours"):
+            need_hours.append(doc)
+    if need_hours:
+        hours = await fetch_opening_hours_batch(need_hours)
+        for doc, h in zip(need_hours, hours):
+            if h:
+                repository.update_place(doc["id"], trip_id, {"opening_hours": h})
+                doc["opening_hours"] = h
+    return docs
 
 
 @router.put("/reorder")

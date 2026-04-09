@@ -8,6 +8,7 @@ import { TripMap } from "../components/TripMap";
 import { PlanPromptModal } from "../components/PlanPromptModal";
 import { SkeletonPlannerPage } from "../components/Skeleton";
 import { api } from "../api/client";
+import { getWeekday, getWeekdayName } from "../utils/openingHours";
 import type { Place } from "../types";
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
@@ -182,7 +183,8 @@ export function PlannerPage() {
                 key={day}
                 dayNumber={day}
                 places={dayGroups.get(day) || []}
-                label={`Day ${day}`}
+                label={`Day ${day} · ${getWeekdayName(getWeekday(currentTrip.start_date, day))}`}
+                startDate={currentTrip.start_date}
                 onPlaceClick={(p) => setSelectedPlaceId(p.id)}
                 tripId={tripId}
                 onUpdatePlace={handleUpdatePlace}

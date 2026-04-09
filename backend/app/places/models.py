@@ -13,6 +13,7 @@ class PlaceCreate(BaseModel):
     longitude: Optional[float] = None
     google_place_id: Optional[str] = None
     google_maps_url: Optional[str] = None
+    opening_hours: Optional[dict] = None
     geocode_confidence: Optional[str] = None
     day_number: Optional[int] = None
     order_in_day: Optional[int] = None
@@ -29,6 +30,7 @@ class PlaceUpdate(BaseModel):
     longitude: Optional[float] = None
     google_place_id: Optional[str] = None
     google_maps_url: Optional[str] = None
+    opening_hours: Optional[dict] = None
     geocode_confidence: Optional[str] = None
     day_number: Optional[int] = None
     order_in_day: Optional[int] = None
@@ -56,6 +58,7 @@ class PlaceResponse(BaseModel):
     longitude: Optional[float] = None
     google_place_id: Optional[str] = None
     google_maps_url: Optional[str] = None
+    opening_hours: Optional[dict] = None
     geocode_confidence: Optional[str] = None
     source: str
     day_number: Optional[int] = None

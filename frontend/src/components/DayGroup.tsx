@@ -1,5 +1,6 @@
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { PlaceCard } from "./PlaceCard";
+import { getWeekday } from "../utils/openingHours";
 import type { Place } from "../types";
 
 const DAY_COLORS = [
@@ -39,13 +40,15 @@ interface Props {
   dayNumber: number | null;
   places: Place[];
   label: string;
+  startDate?: string;
   onPlaceClick?: (place: Place) => void;
   tripId?: string;
   onUpdatePlace?: (placeId: string, data: Record<string, unknown>) => void;
   onDeletePlace?: (placeId: string) => void;
 }
 
-export function DayGroup({ dayNumber, places, label, onPlaceClick, tripId, onUpdatePlace, onDeletePlace }: Props) {
+export function DayGroup({ dayNumber, places, label, startDate, onPlaceClick, tripId, onUpdatePlace, onDeletePlace }: Props) {
+  const weekday = startDate && dayNumber !== null ? getWeekday(startDate, dayNumber) : undefined;
   const droppableId = dayNumber !== null ? `day-${dayNumber}` : "unassigned";
   const colorIdx = dayNumber !== null ? (dayNumber - 1) % DAY_COLORS.length : -1;
   const borderColor = colorIdx >= 0 ? DAY_COLORS[colorIdx] : "border-gray-300";
@@ -87,6 +90,7 @@ export function DayGroup({ dayNumber, places, label, onPlaceClick, tripId, onUpd
                       <PlaceCard
                         place={place}
                         distanceFromPrev={dist}
+                        weekday={weekday}
                         onPlaceClick={onPlaceClick}
                         tripId={tripId}
                         onUpdate={onUpdatePlace ? (data) => onUpdatePlace(place.id, data) : undefined}

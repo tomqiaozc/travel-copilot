@@ -7,6 +7,7 @@ from urllib.parse import urlparse, unquote
 import httpx
 
 from app.config import settings
+from app.maps.opening_hours import normalize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ async def fetch_place_details(place_id: str) -> dict:
     url = f"https://places.googleapis.com/v1/places/{place_id}"
     headers = {
         "X-Goog-Api-Key": settings.google_maps_api_key,
-        "X-Goog-FieldMask": "id,displayName,location,primaryType,formattedAddress,googleMapsUri",
+        "X-Goog-FieldMask": "id,displayName,location,primaryType,formattedAddress,googleMapsUri,regularOpeningHours",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(url, headers=headers)
@@ -172,6 +173,8 @@ async def resolve_google_maps_link(url: str) -> dict:
     display_name = parsed.get("name") or details.get("displayName", {}).get("text", "Unknown")
     location = details.get("location", {})
     primary_type = details.get("primaryType")
+    raw_hours = details.get("regularOpeningHours")
+    opening_hours = normalize_periods(raw_hours) if raw_hours else None
 
     # Always keep the user's original link — it's the one they copied from Google Maps
     return {
@@ -182,4 +185,5 @@ async def resolve_google_maps_link(url: str) -> dict:
         "google_place_id": details.get("id", google_place_id),
         "formatted_address": details.get("formattedAddress", ""),
         "google_maps_url": original_url,
+        "opening_hours": opening_hours,
     }

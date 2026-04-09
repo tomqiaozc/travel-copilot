@@ -15,6 +15,12 @@ export interface Trip {
   created_at: string;
 }
 
+export interface OpeningPeriod {
+  day: number;  // 0=Sunday, 1=Monday, ..., 6=Saturday
+  open: string; // "HH:MM"
+  close: string; // "HH:MM"
+}
+
 export interface Place {
   id: string;
   trip_id: string;
@@ -27,6 +33,7 @@ export interface Place {
   longitude: number | null;
   google_place_id?: string;
   google_maps_url?: string;
+  opening_hours?: { periods: OpeningPeriod[] } | null;
   geocode_confidence?: "high" | "low" | "none";
   source: "ai_extracted" | "manual" | "google_import";
   day_number: number | null;
@@ -45,6 +52,7 @@ export interface ExtractedPlace {
   longitude?: number | null;
   google_place_id?: string;
   geocode_confidence?: "high" | "low" | "none";
+  opening_hours?: { periods: OpeningPeriod[] } | null;
 }
 
 export interface DaySchedule {
@@ -66,6 +74,7 @@ export interface ResolvedPlace {
   google_place_id: string;
   formatted_address: string;
   google_maps_url: string;
+  opening_hours?: { periods: OpeningPeriod[] } | null;
 }
 
 export interface ImportedPlace {
