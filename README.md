@@ -38,7 +38,7 @@ Drag-and-drop day-by-day itinerary with color-coded map markers, route lines, an
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4, Zustand 5 |
 | Backend | Python 3.9+, FastAPI, Pydantic |
 | AI | GPT-4o Vision via GitHub Models API |
-| Maps | Google Maps JavaScript API, Google Geocoding API |
+| Maps | Google Maps JavaScript API, Google Places API (New), Google Geocoding API |
 | Database | Azure Cosmos DB (production), PostgreSQL or in-memory (local dev) |
 | Storage | Azure Blob Storage (production), local filesystem (local dev) |
 | Auth | Google OAuth 2.0 + JWT (production), dev-login bypass (local dev) |
@@ -191,8 +191,9 @@ docker-compose down -v               # Stop PostgreSQL and delete all data
 │   └── app/
 │       ├── ai/          # GPT-4o vision extraction & trip planning
 │       ├── auth/        # Google OAuth + JWT + dev-login
+│       ├── export/      # KML and Google Maps export endpoints
 │       ├── google_import/ # Google Maps saved places import (Takeout CSV)
-│       ├── maps/        # Geocoding, distance calc, KML export, place resolver
+│       ├── maps/        # Geocoding (Places Text Search), distance calc, place resolver, opening hours
 │       ├── places/      # Place CRUD
 │       ├── trips/       # Trip CRUD
 │       └── images/      # Screenshot upload & storage
@@ -201,7 +202,9 @@ docker-compose down -v               # Stop PostgreSQL and delete all data
 │       ├── pages/       # LoginPage, TripsPage, TripDetailPage, PlannerPage
 │       ├── components/  # DayGroup, TripMap, ExtractionModal, etc.
 │       ├── stores/      # Zustand stores (auth, trip)
+│       ├── utils/       # Google Maps links, opening hours helpers
 │       └── api/         # API client with JWT auth
+├── tests/               # Integration tests (geocoding accuracy, E2E)
 └── docs/
     └── screenshots/     # Product screenshots
 ```

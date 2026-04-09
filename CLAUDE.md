@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Travel Copilot — an AI-powered travel itinerary planner. Users upload travel guide screenshots (primarily Chinese/Xiaohongshu content), GPT-4o Vision extracts places, Azure Maps geocodes them, and an AI planner generates day-by-day itineraries with drag-and-drop reordering and map visualization.
+Travel Copilot — an AI-powered travel itinerary planner. Users upload travel guide screenshots (primarily Chinese/Xiaohongshu content), GPT-4o Vision extracts places, Google Places Text Search API geocodes them, and an AI planner generates day-by-day itineraries with drag-and-drop reordering and map visualization.
 
 ## Repository Structure
 
@@ -46,7 +46,7 @@ cd tests && pytest               # Requires backend .env to be configured
 
 Required for local dev (with `USE_LOCAL_DB=true`, only these are needed):
 - `GITHUB_TOKEN` — GitHub Models API token (for GPT-4o)
-- `AZURE_MAPS_KEY` — Azure Maps subscription key
+- `GOOGLE_MAPS_API_KEY` — Google Maps Platform API key (Places API, Geocoding API, Maps JavaScript API)
 - `AI_MODEL` — Model name (default: `gpt-4o`)
 - `USE_LOCAL_DB=true` — Uses in-memory database, no Azure Cosmos needed
 
@@ -54,7 +54,7 @@ Production additionally needs: `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE
 
 ### Frontend (`frontend/.env`)
 
-- `VITE_AZURE_MAPS_KEY` — Azure Maps key for map rendering
+- `VITE_GOOGLE_MAPS_API_KEY` — Google Maps API key for map rendering
 - `VITE_GOOGLE_CLIENT_ID` — Google OAuth client ID
 
 ## Architecture
@@ -72,8 +72,10 @@ Domain-driven modules, each with `router.py` (API), `models.py` (Pydantic), `rep
   - `planner.py` — AI itinerary planning using coordinate distance matrices for proximity grouping
   - `github_models.py` — HTTP client for GitHub Models API (OpenAI-compatible endpoint)
 - `maps/` — Geocoding and mapping:
-  - `geocoding.py` — Multi-strategy parallel geocoding with cluster-based outlier detection
+  - `geocoding.py` — Google Places Text Search geocoding with cluster-based outlier detection
   - `distance.py` — Haversine distance calculations
+  - `place_resolver.py` — Resolve Google Maps links to place details
+  - `opening_hours.py` — Fetch opening hours from Google Places API
   - `export.py` — Google Maps direction URL generation
 - `db.py` / `db_memory.py` — Database abstraction; `USE_LOCAL_DB=true` switches to in-memory store with SQL-like query parsing
 
@@ -85,7 +87,7 @@ Domain-driven modules, each with `router.py` (API), `models.py` (Pydantic), `rep
 ### Frontend (`frontend/src/`)
 
 - `pages/` — Four route pages: LoginPage, TripsPage, TripDetailPage, PlannerPage
-- `components/` — UI components (DayGroup with drag-and-drop, TripMap with Azure Maps, ExtractionModal, PlanPromptModal, etc.)
+- `components/` — UI components (DayGroup with drag-and-drop, TripMap with Google Maps, ExtractionModal, PlanPromptModal, etc.)
 - `stores/` — Zustand stores: `auth.ts` (user/login state), `trip.ts` (trips/places CRUD + AI actions)
 - `api/client.ts` — Fetch wrapper with JWT auth, auto-redirect on 401
 - `types/index.ts` — Shared TypeScript interfaces
@@ -94,13 +96,13 @@ Domain-driven modules, each with `router.py` (API), `models.py` (Pydantic), `rep
 - Vite proxies `/api` to `http://localhost:8000` (configured in `vite.config.ts`)
 - All server state managed through Zustand stores that wrap API calls
 - Drag-and-drop itinerary via `@hello-pangea/dnd`
-- Azure Maps SDK for interactive map with color-coded day markers and route lines
+- Google Maps JavaScript API for interactive map with color-coded day markers and route lines
 
 ### AI Pipeline Flow
 
 1. User uploads travel guide screenshots
 2. GPT-4o Vision extracts place names/types/notes from images
-3. Multi-strategy parallel geocoding (local name, English, Chinese variants) via Azure Maps Fuzzy Search
+3. Multi-strategy geocoding (local name, English, Chinese variants) via Google Places Text Search API
 4. Cluster-based validation: compute median center, reverse-geocode for city hint, re-geocode outliers with geographic constraints
 5. AI planner groups places by proximity using distance matrices, generates day schedule
 6. User refines via drag-and-drop, exports to Google Maps
