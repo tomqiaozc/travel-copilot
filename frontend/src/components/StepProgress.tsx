@@ -10,14 +10,10 @@ interface StepProgressProps {
   active: boolean;
 }
 
-export function StepProgress({ steps, active }: StepProgressProps) {
+function StepProgressInner({ steps }: { steps: Step[] }) {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    if (!active) {
-      setCurrentStep(0);
-      return;
-    }
     if (currentStep >= steps.length - 1) return;
 
     const timer = setTimeout(() => {
@@ -25,9 +21,7 @@ export function StepProgress({ steps, active }: StepProgressProps) {
     }, steps[currentStep].duration);
 
     return () => clearTimeout(timer);
-  }, [active, currentStep, steps]);
-
-  if (!active) return null;
+  }, [currentStep, steps]);
 
   return (
     <div className="space-y-2 py-2">
@@ -52,4 +46,9 @@ export function StepProgress({ steps, active }: StepProgressProps) {
       ))}
     </div>
   );
+}
+
+export function StepProgress({ steps, active }: StepProgressProps) {
+  if (!active) return null;
+  return <StepProgressInner steps={steps} />;
 }

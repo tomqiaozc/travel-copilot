@@ -93,7 +93,8 @@ function MapContent({ places, selectedPlaceId }: { places: Place[]; selectedPlac
     if (!place?.latitude || !place?.longitude) return;
     map.panTo({ lat: place.latitude, lng: place.longitude });
     map.setZoom(15);
-    setSelectedPlace(place);
+    const raf = requestAnimationFrame(() => setSelectedPlace(place));
+    return () => cancelAnimationFrame(raf);
   }, [map, selectedPlaceId, places]);
 
   // Draw polylines

@@ -29,6 +29,7 @@ export function PlannerPage() {
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
 
   useEffect(() => {
     if (tripId) fetchTripDetail(tripId);
@@ -171,33 +172,63 @@ export function PlannerPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-3">
-          <Link to={`/trips/${tripId}`} className="text-gray-400 hover:text-gray-600">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to={`/trips/${tripId}`} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
             &larr;
           </Link>
-          <h2 className="text-xl font-bold text-gray-800">
-            {currentTrip.name} — Itinerary
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+            {currentTrip.name}
+            <span className="hidden sm:inline"> — Itinerary</span>
           </h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => setShowPlanModal(true)}
-            className="bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg text-sm hover:bg-blue-50"
+            className="bg-white border border-blue-600 text-blue-600 px-3 sm:px-4 py-2 rounded-lg text-sm hover:bg-blue-50"
           >
-            AI Plan
+            <span className="sm:hidden">AI</span>
+            <span className="hidden sm:inline">AI Plan</span>
           </button>
           <button
             onClick={handleExportKml}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+            className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
           >
-            Export KML
+            <span className="sm:hidden">KML</span>
+            <span className="hidden sm:inline">Export KML</span>
           </button>
         </div>
       </div>
 
-      <div className="flex gap-4" style={{ height: "calc(100vh - 160px)" }}>
-        {/* Left: Itinerary */}
-        <div className="w-80 overflow-y-auto flex-shrink-0">
+      {/* Mobile tab bar */}
+      <div className="flex md:hidden mb-3 bg-gray-100 rounded-lg p-1">
+        <button
+          onClick={() => setMobileTab("list")}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+            mobileTab === "list"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-500"
+          }`}
+        >
+          Itinerary
+        </button>
+        <button
+          onClick={() => setMobileTab("map")}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+            mobileTab === "map"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-500"
+          }`}
+        >
+          Map
+        </button>
+      </div>
+
+      {/* Desktop: side-by-side / Mobile: tab-switched */}
+      <div className="md:flex md:gap-4 md:h-[calc(100vh-160px)]">
+        {/* Itinerary list */}
+        <div className={`md:w-80 md:overflow-y-auto md:flex-shrink-0 overflow-y-auto h-[calc(100vh-220px)] ${
+          mobileTab !== "list" ? "hidden md:block" : ""
+        }`}>
           <DragDropContext onDragEnd={handleDragEnd}>
             {Array.from({ length: numDays }, (_, i) => i + 1).map((day) => (
               <DayGroup
@@ -206,7 +237,7 @@ export function PlannerPage() {
                 places={dayGroups.get(day) || []}
                 label={`Day ${day} · ${getWeekdayName(getWeekday(currentTrip.start_date, day))}`}
                 startDate={currentTrip.start_date}
-                onPlaceClick={(p) => setSelectedPlaceId(p.id)}
+                onPlaceClick={(p) => { setSelectedPlaceId(p.id); setMobileTab("map"); }}
                 tripId={tripId}
                 onUpdatePlace={handleUpdatePlace}
                 onDeletePlace={handleDeletePlace}
@@ -216,7 +247,7 @@ export function PlannerPage() {
               dayNumber={null}
               places={dayGroups.get(null) || []}
               label="Unassigned"
-              onPlaceClick={(p) => setSelectedPlaceId(p.id)}
+              onPlaceClick={(p) => { setSelectedPlaceId(p.id); setMobileTab("map"); }}
               tripId={tripId}
               onUpdatePlace={handleUpdatePlace}
               onDeletePlace={handleDeletePlace}
@@ -224,8 +255,10 @@ export function PlannerPage() {
           </DragDropContext>
         </div>
 
-        {/* Right: Map */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
+        {/* Map */}
+        <div className={`flex-1 bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-220px)] ${
+          mobileTab !== "map" ? "hidden md:block" : ""
+        }`}>
           <TripMap places={places} googleMapsApiKey={GOOGLE_MAPS_KEY} selectedPlaceId={selectedPlaceId} />
         </div>
       </div>

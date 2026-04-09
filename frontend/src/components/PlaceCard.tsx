@@ -82,7 +82,7 @@ export function PlaceCard({ place, distanceFromPrev, weekday, hotelRole, onPlace
           onChange={(e) => setName(e.target.value)}
           className="w-full border rounded px-2 py-1 text-sm"
         />
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {TYPES.map((t) => (
             <button
               key={t}

@@ -81,7 +81,7 @@ function PlaceCard({
           onChange={(e) => setName(e.target.value)}
           className="w-full border rounded px-2 py-1 text-sm"
         />
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {TYPES.map((t) => (
             <button
               key={t}
@@ -257,7 +257,7 @@ export function TripDetailPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div>
           {editingTitle ? (
             <div className="flex items-center gap-2">

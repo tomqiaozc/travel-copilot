@@ -1,6 +1,6 @@
 # Travel Copilot
 
-AI-powered travel itinerary planner. Upload travel guide screenshots (e.g. from Xiaohongshu/小红书), let GPT-4o Vision extract places, auto-geocode with Google Maps, then plan and organize your trip with drag-and-drop itineraries and interactive maps.
+AI-powered travel itinerary planner. Upload travel guide screenshots (e.g. from Xiaohongshu/小红书), let GPT-4o Vision extract places, auto-geocode with Google Maps, then plan and organize your trip with drag-and-drop itineraries and interactive maps. Fully responsive — works on both desktop and mobile browsers, with Google Maps app deep linking on phones.
 
 ## Screenshots
 
@@ -31,11 +31,20 @@ Drag-and-drop day-by-day itinerary with color-coded map markers, route lines, an
 6. **Plan itinerary** — AI groups places by proximity into days, or drag-and-drop manually
 7. **Export** — download KML file to import into Google My Maps
 
+## Mobile Support
+
+The app is fully responsive and optimized for mobile browsers:
+
+- **Adaptive layout** — pages automatically adjust between desktop (side-by-side) and mobile (stacked/tabbed) views
+- **Planner page** — itinerary list and map switch via tabs on mobile; tapping a place auto-switches to the map view
+- **Google Maps deep linking** — tapping a Google Maps link on mobile opens the Google Maps app directly (if installed), using the [Maps URLs API](https://developers.google.com/maps/documentation/urls/get-started)
+- **Touch-friendly** — properly sized tap targets, wrapped buttons, and compact navigation
+
 ## Tech Stack
 
 | Layer | Tech |
 |-------|------|
-| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4, Zustand 5 |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4, Zustand 5, responsive (desktop + mobile) |
 | Backend | Python 3.9+, FastAPI, Pydantic |
 | AI | GPT-4o Vision via GitHub Models API |
 | Maps | Google Maps JavaScript API, Google Places API (New), Google Geocoding API |

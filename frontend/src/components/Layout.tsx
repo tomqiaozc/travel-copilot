@@ -12,13 +12,13 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-blue-600 text-white px-6 py-3 flex justify-between items-center">
+      <nav className="bg-blue-600 text-white px-4 sm:px-6 py-3 flex justify-between items-center">
         <Link to="/" className="font-bold text-lg">
           Travel Copilot
         </Link>
         {user && (
-          <div className="flex items-center gap-4">
-            <span className="text-sm">{user.name || user.email}</span>
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <span className="text-sm truncate max-w-[120px] sm:max-w-none hidden sm:inline">{user.name || user.email}</span>
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
@@ -39,7 +39,7 @@ export function Layout() {
           </div>
         )}
       </nav>
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Outlet />
       </main>
     </div>
