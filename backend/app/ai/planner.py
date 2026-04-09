@@ -12,6 +12,7 @@ Rules:
 - Consider place types: try to include a mix of attractions and restaurants each day
 - Hotels don't need to be scheduled in the daily itinerary, but include all other place types
 - IMPORTANT: You MUST assign ALL non-hotel places to a day. Do not leave any place unassigned.
+- IMPORTANT: Restaurants are ANCHORED to their current day. Do NOT move restaurants to a different day unless the user explicitly asks to rearrange restaurants. Arrange attractions around the restaurants, not the other way around.
 - If a place has no coordinates, still assign it to a day based on context (name similarity to nearby places, or spread evenly).
 - WARNING: Some places may have INACCURATE coordinates (marked as "OUTLIER" below). Treat these as if they have no coordinates — do NOT use their position for distance-based grouping. Instead, assign them based on name/type similarity or spread evenly.
 
@@ -55,6 +56,8 @@ def _build_places_description(places: list) -> str:
         else:
             coord_str = "(no coordinates)"
         lines.append(f"- id={p['id']}: {p['name']} ({p['type']}) {coord_str}")
+        if p.get("type") == "restaurant" and p.get("day_number"):
+            lines[-1] += f" [ANCHORED to Day {p['day_number']}]"
 
     # Add distance matrix for places that have coordinates
     places_with_coords = [p for p in places if p.get("latitude") and p.get("longitude")]
